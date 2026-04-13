@@ -3,286 +3,187 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Topo Pro - RGF93 / L93</title>
+  <title>Topo Pro - Système de Dossiers</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
-    body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #0a0a0a; color: #e5e5e5; min-height: 100vh; overflow-x: hidden; }
-    .app { max-width: 500px; margin: 0 auto; padding: 10px; }
+    body { font-family: 'Segoe UI', Roboto, sans-serif; background: #0a0a0a; color: #e5e5e5; min-height: 100vh; }
+    .screen { display: none; padding: 20px; max-width: 500px; margin: 0 auto; }
+    .active { display: block; }
 
-    /* Bandeau de bord supérieur */
-    .dashboard {
-      background: #1a1a1a;
-      border: 1px solid #333;
-      border-radius: 12px;
-      padding: 15px;
-      margin-bottom: 15px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-    .main-coords {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 10px;
-      text-align: center;
-      border-bottom: 1px solid #333;
-      padding-bottom: 12px;
-      margin-bottom: 12px;
-    }
-    .precision-bar {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-    .label { font-size: 10px; color: #888; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 1px; font-weight: bold; }
-    .val { font-size: 16px; font-weight: 900; color: #fff; font-family: monospace; }
+    /* Accueil */
+    .setup-card { background: #1a1a1a; padding: 25px; border-radius: 15px; border: 1px solid #333; text-align: center; }
+    h2 { margin-bottom: 20px; font-size: 18px; color: #4ade80; text-transform: uppercase; }
     
+    /* Dashboard */
+    .dashboard { background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 15px; margin-bottom: 15px; position: sticky; top: 10px; }
+    .main-coords { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; text-align: center; border-bottom: 1px solid #333; padding-bottom: 12px; margin-bottom: 12px; }
+    .precision-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .label { font-size: 10px; color: #888; text-transform: uppercase; margin-bottom: 4px; font-weight: bold; }
+    .val { font-size: 15px; font-weight: 900; color: #fff; font-family: monospace; }
     .acc-box { background: #111; padding: 8px; border-radius: 6px; text-align: center; border: 1px solid #222; }
     .acc-val { font-size: 12px; font-weight: bold; font-family: monospace; }
-    .good { color: #4ade80; }
-    .warn { color: #fbbf24; }
-    .crit { color: #f87171; }
+    .good { color: #4ade80; } .warn { color: #fbbf24; } .crit { color: #f87171; }
 
-    /* Infos GPS et Status */
-    .gps-info { font-size: 11px; color: #555; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; padding-left: 5px; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: #444; }
-    .dot.active { background: #22c55e; box-shadow: 0 0 8px #22c55e; animation: pulse 1.5s infinite; }
-    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
-
-    /* Zone de saisie */
-    .record-section { display: flex; gap: 8px; margin-bottom: 15px; }
-    .record-section input {
-      flex: 1; background: #1a1a1a; border: 2px solid #333;
-      border-radius: 10px; padding: 12px; color: #fff; font-size: 18px;
-      font-family: monospace;
-    }
-    .record-section input:focus { border-color: #555; outline: none; background: #222; }
-    .btn-record {
-      background: #22c55e; color: #000; border: none; border-radius: 10px;
-      padding: 0 25px; font-weight: 900; cursor: pointer; font-size: 16px;
-    }
-    .btn-record:active { background: #16a34a; transform: scale(0.98); }
-    .btn-record:disabled { background: #222; color: #555; cursor: not-allowed; }
-
-    /* Liste des points */
-    .points-header { display: flex; justify-content: space-between; align-items: center; padding: 0 5px 8px; border-bottom: 1px solid #222; margin-bottom: 10px; }
-    .count-txt { font-size: 11px; color: #666; text-transform: uppercase; }
-    .points-list { display: flex; flex-direction: column; gap: 8px; }
-    .point-item {
-      background: #161616; border: 1px solid #222; border-radius: 10px;
-      padding: 12px; display: flex; justify-content: space-between; align-items: center;
-      animation: slideIn 0.3s ease-out;
-    }
-    @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-    .btn-export { background: transparent; border: 1px solid #444; color: #888; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: bold; }
-    .btn-delete { color: #444; background: none; border: none; font-size: 24px; cursor: pointer; padding: 0 10px; }
-    .btn-delete:active { color: #ef4444; }
+    /* Inputs */
+    input { width: 100%; background: #1a1a1a; border: 2px solid #333; border-radius: 10px; padding: 12px; color: #fff; font-size: 16px; margin-bottom: 15px; }
+    .btn { background: #4ade80; color: #000; border: none; border-radius: 10px; padding: 15px 25px; font-weight: 900; cursor: pointer; width: 100%; font-size: 16px; text-transform: uppercase; }
     
-    .empty-msg { text-align: center; color: #444; padding: 40px; font-size: 13px; }
+    .record-section { display: flex; gap: 8px; margin-bottom: 15px; }
+    .record-section input { margin-bottom: 0; flex: 1; font-size: 20px; border-color: #444; }
+    .btn-ok { width: auto; padding: 0 30px; }
+
+    .status-bar { font-size: 11px; color: #666; margin-bottom: 10px; display: flex; justify-content: space-between; }
+    .points-list { display: flex; flex-direction: column; gap: 8px; }
+    .point-item { background: #161616; border: 1px solid #222; border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center; }
   </style>
 </head>
 <body>
 
-<div class="app">
-  <div class="dashboard">
-    <div class="main-coords">
-      <div>
-        <div class="label">Est (X)</div>
-        <div class="val" id="x-val">—</div>
-      </div>
-      <div>
-        <div class="label">Nord (Y)</div>
-        <div class="val" id="y-val">—</div>
-      </div>
-      <div>
-        <div class="label">Alt (Z)</div>
-        <div class="val" id="z-val">—</div>
-      </div>
-    </div>
-    <div class="precision-bar">
-      <div class="acc-box">
-        <div class="label">Préc. Horiz. (XY)</div>
-        <div class="acc-val" id="acc-h">—</div>
-      </div>
-      <div class="acc-box">
-        <div class="label">Préc. Vert. (Z)</div>
-        <div class="acc-val" id="acc-v">—</div>
-      </div>
+  <div id="screen-start" class="screen active">
+    <div class="setup-card">
+      <h2>Nouveau Projet</h2>
+      <input type="text" id="project-name" placeholder="NOM DU PROJET" inputmode="text">
+      <p style="font-size: 12px; color: #888; margin-bottom: 20px;">
+        Cliquez ci-dessous pour choisir votre dossier "topo".<br>Un sous-dossier au nom du projet sera créé.
+      </p>
+      <button class="btn" onclick="startSystem()">Sélectionner Dossier & Créer</button>
     </div>
   </div>
 
-  <div class="gps-info">
-    <div id="dot" class="dot"></div>
-    <span id="status">Initialisation du GPS...</span>
-  </div>
+  <div id="screen-topo" class="screen">
+    <div class="status-bar">
+      <span>PROJET: <b id="display-project-name" style="color:#4ade80"></b></span>
+      <span id="sync-status" style="color:#888">Initialisation...</span>
+    </div>
+    
+    <div class="dashboard">
+      <div class="main-coords">
+        <div><div class="label">Est (X)</div><div class="val" id="x-val">—</div></div>
+        <div><div class="label">Nord (Y)</div><div class="val" id="y-val">—</div></div>
+        <div><div class="label">Alt (Z)</div><div class="val" id="z-val">—</div></div>
+      </div>
+      <div class="precision-bar">
+        <div class="acc-box"><div class="label">Préc. XY</div><div class="acc-val" id="acc-h">—</div></div>
+        <div class="acc-box"><div class="label">Préc. Z</div><div class="acc-val" id="acc-v">—</div></div>
+      </div>
+    </div>
 
-  <div class="record-section">
-    <input type="text" 
-           id="pt-name" 
-           placeholder="Nom / N°" 
-           inputmode="decimal" 
-           enterkeyhint="done" />
-    <button class="btn-record" id="btn-rec" disabled onclick="record()">OK</button>
-  </div>
+    <div class="record-section">
+      <input type="text" id="pt-name" placeholder="N° POINT" inputmode="decimal" enterkeyhint="done">
+      <button class="btn btn-ok" id="btn-rec" disabled onclick="record()">OK</button>
+    </div>
 
-  <div class="points-header">
-    <span class="count-txt" id="count">0 point enregistré</span>
-    <button class="btn-export" id="btn-csv" disabled onclick="exportCSV()">Exporter CSV</button>
+    <div id="list" class="points-list"></div>
   </div>
-
-  <div id="list" class="points-list">
-    <div class="empty-msg">Prêt pour le levé.</div>
-  </div>
-</div>
 
 <script>
-  // Définition Lambert-93 (RGF93)
   const EPSG2154 = "+proj=lcc +lat_1=49 +lat_2=44 +lat_0=46.5 +lon_0=3 +x_0=700000 +y_0=6600000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs";
-  
   let lastPos = null;
   let points = [];
-  let ptCounter = 1;
+  let projectHandle = null;
+  let fileHandle = null;
 
-  // Mise à jour de l'affichage en temps réel
-  function updateDisplay(p) {
-    lastPos = p;
-    const l93 = proj4("WGS84", EPSG2154, [p.coords.longitude, p.coords.latitude]);
-    
-    // Coordonnées L93
-    document.getElementById('x-val').textContent = l93[0].toFixed(2);
-    document.getElementById('y-val').textContent = l93[1].toFixed(2);
-    document.getElementById('z-val').textContent = p.coords.altitude ? p.coords.altitude.toFixed(2) : 'N/D';
+  async function startSystem() {
+    const pName = document.getElementById('project-name').value.trim();
+    if (!pName) return alert("Nom du projet manquant");
 
-    // Précisions
-    const hAcc = p.coords.accuracy;
-    const vAcc = p.coords.altitudeAccuracy || (hAcc * 1.5); // Estimation si l'API ne renvoie pas la valeur
+    try {
+      // 1. Sélection du dossier parent "topo" par l'utilisateur
+      const parentHandle = await window.showDirectoryPicker();
+      
+      // 2. Création du sous-dossier au nom du projet
+      projectHandle = await parentHandle.getDirectoryHandle(pName, { create: true });
+      
+      // 3. Création du fichier de données (Format CSV pour compatibilité topo directe)
+      fileHandle = await projectHandle.getFileHandle(`${pName}.csv`, { create: true });
+      
+      // Initialiser le header si fichier vide
+      const file = await fileHandle.getFile();
+      if (file.size === 0) {
+        await writeToFile("Nom,X_L93,Y_L93,Z_Ellipsoide,Precision_H,Horodatage\n");
+      }
 
-    const hEl = document.getElementById('acc-h');
-    hEl.textContent = `± ${hAcc.toFixed(1)}m`;
-    hEl.className = 'acc-val ' + (hAcc < 3 ? 'good' : hAcc < 10 ? 'warn' : 'crit');
-
-    const vEl = document.getElementById('acc-v');
-    vEl.textContent = `± ${vAcc.toFixed(1)}m`;
-    vEl.className = 'acc-val ' + (vAcc < 5 ? 'good' : vAcc < 15 ? 'warn' : 'crit');
-
-    document.getElementById('dot').className = 'dot active';
-    document.getElementById('status').textContent = 'Signal GPS actif (RGF93/L93)';
-    document.getElementById('btn-rec').disabled = false;
+      document.getElementById('display-project-name').textContent = pName;
+      document.getElementById('screen-start').classList.remove('active');
+      document.getElementById('screen-topo').classList.add('active');
+      document.getElementById('sync-status').textContent = "Auto-save actif";
+      
+      initGPS();
+      document.getElementById('pt-name').focus();
+    } catch (err) {
+      alert("L'accès au dossier est requis pour l'enregistrement automatique.");
+      console.error(err);
+    }
   }
 
-  // Enregistrement du point
-  function record() {
+  async function writeToFile(content) {
+    const writable = await fileHandle.createWritable({ keepExistingData: true });
+    const file = await fileHandle.getFile();
+    await writable.write({ type: 'write', position: file.size, data: content });
+    await writable.close();
+  }
+
+  function initGPS() {
+    navigator.geolocation.watchPosition(p => {
+      lastPos = p;
+      const l93 = proj4("WGS84", EPSG2154, [p.coords.longitude, p.coords.latitude]);
+      document.getElementById('x-val').textContent = l93[0].toFixed(2);
+      document.getElementById('y-val').textContent = l93[1].toFixed(2);
+      document.getElementById('z-val').textContent = p.coords.altitude ? p.coords.altitude.toFixed(2) : 'N/D';
+      
+      const hAcc = p.coords.accuracy;
+      const hEl = document.getElementById('acc-h');
+      hEl.textContent = `± ${hAcc.toFixed(1)}m`;
+      hEl.className = 'acc-val ' + (hAcc < 3 ? 'good' : hAcc < 10 ? 'warn' : 'crit');
+      
+      document.getElementById('btn-rec').disabled = false;
+    }, null, { enableHighAccuracy: true });
+  }
+
+  async function record() {
     if(!lastPos) return;
-    
     const nameInput = document.getElementById('pt-name');
+    const name = nameInput.value.trim() || (points.length + 1);
     const l93 = proj4("WGS84", EPSG2154, [lastPos.coords.longitude, lastPos.coords.latitude]);
     
-    // Si vide, on incrémente automatiquement
-    const name = nameInput.value.trim() || ptCounter;
-    
     const pt = {
-      id: Date.now(),
-      name: name,
-      x: l93[0],
-      y: l93[1],
-      z: lastPos.coords.altitude,
-      accH: lastPos.coords.accuracy,
-      accV: lastPos.coords.altitudeAccuracy || (lastPos.coords.accuracy * 1.5),
-      ts: new Date().toISOString()
+      name, x: l93[0].toFixed(3), y: l93[1].toFixed(3), 
+      z: lastPos.coords.altitude ? lastPos.coords.altitude.toFixed(3) : '',
+      acc: lastPos.coords.accuracy.toFixed(2),
+      ts: new Date().toLocaleTimeString()
     };
 
-    points.push(pt);
-    if (!isNaN(name)) ptCounter = parseInt(name) + 1; else ptCounter++;
-    
-    // Nettoyage et maintien du focus / clavier ouvert
-    nameInput.value = '';
-    render();
-    
-    // Petite pause pour laisser le focus se remettre et le clavier rester levé
-    setTimeout(() => {
-      nameInput.focus();
-    }, 50);
-  }
-
-  // Affichage de la liste
-  function render() {
-    const cont = document.getElementById('list');
-    document.getElementById('count').textContent = `${points.length} point(s) enregistré(s)`;
-    document.getElementById('btn-csv').disabled = points.length === 0;
-    
-    if (points.length === 0) {
-      cont.innerHTML = '<div class="empty-msg">Prêt pour le levé.</div>';
-      return;
+    // 1. Enregistrement physique immédiat
+    const csvLine = `${pt.name},${pt.x},${pt.y},${pt.z},${pt.acc},${pt.ts}\n`;
+    try {
+      await writeToFile(csvLine);
+      document.getElementById('sync-status').textContent = "Dernier point sauvé à " + pt.ts;
+      document.getElementById('sync-status').style.color = "#4ade80";
+    } catch (e) {
+      document.getElementById('sync-status').textContent = "Erreur sauvegarde !";
+      document.getElementById('sync-status').style.color = "#ef4444";
     }
 
+    // 2. Mise à jour de la liste visuelle
+    points.push(pt);
+    nameInput.value = '';
+    render();
+    setTimeout(() => nameInput.focus(), 50);
+  }
+
+  function render() {
+    const cont = document.getElementById('list');
     cont.innerHTML = '';
-    [...points].reverse().forEach(p => {
+    [...points].reverse().slice(0, 10).forEach(p => {
       const d = document.createElement('div');
       d.className = 'point-item';
-      d.innerHTML = `
-        <div>
-          <div style="font-weight:900; font-size:15px; color:#4ade80;">${p.name}</div>
-          <div style="font-size:11px; font-family:monospace; color:#888; margin-top:2px;">
-            E:${p.x.toFixed(2)} N:${p.y.toFixed(2)} Z:${p.z ? p.z.toFixed(2) : '—'}
-          </div>
-        </div>
-        <button class="btn-delete" onclick="deletePt(${p.id})">×</button>
-      `;
+      d.innerHTML = `<div><b style="color:#4ade80">${p.name}</b><br><small style="color:#666">X:${p.x} Y:${p.y} Z:${p.z}</small></div>`;
       cont.appendChild(d);
     });
   }
 
-  function deletePt(id) {
-    points = points.filter(p => p.id !== id);
-    render();
-  }
-
-  // Exportation Standard Topo
-  function exportCSV() {
-    const head = "Nom,X_L93,Y_L93,Z_Ellipsoide,Prec_H,Prec_V,Horodatage\n";
-    const body = points.map(p => 
-      `${p.name},${p.x.toFixed(3)},${p.y.toFixed(3)},${p.z ? p.z.toFixed(3) : ''},${p.accH.toFixed(2)},${p.accV.toFixed(2)},${p.ts}`
-    ).join('\n');
-    
-    const blob = new Blob(["\uFEFF" + head + body], { type: 'text/csv;charset=utf-8;' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `Leve_L93_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  }
-
-  // Gestion du GPS
-  if (navigator.geolocation) {
-    const options = {
-      enableHighAccuracy: true,
-      maximumAge: 0,
-      timeout: 10000
-    };
-
-    const startGPS = () => {
-      navigator.geolocation.watchPosition(updateDisplay, (e) => {
-        document.getElementById('status').textContent = "Erreur : " + e.message;
-        document.getElementById('dot').className = 'dot';
-      }, options);
-    };
-
-    startGPS();
-    // Sécurité pour forcer l'activation au premier clic écran
-    document.body.addEventListener('click', startGPS, { once: true });
-  } else {
-    document.getElementById('status').textContent = "Le GPS n'est pas supporté par ce mobile.";
-  }
-
-  // Gestion de la touche "Entrée" du clavier pour valider
-  document.getElementById('pt-name').addEventListener('keypress', function (e) {
-    if (e.key === 'Enter') {
-      record();
-    }
-  });
+  document.getElementById('pt-name').addEventListener('keypress', e => { if (e.key === 'Enter') record(); });
 </script>
 </body>
 </html>
