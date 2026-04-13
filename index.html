@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Levé Topo GPS</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: monospace; background: #111; color: #e5e5e5; min-height: 100vh; }
+    .app { max-width: 480px; margin: 0 auto; padding: 14px; }
+    h1 { font-size: 14px; letter-spacing: 0.1em; color: #888; text-transform: uppercase; margin-bottom: 14px; }
+
+    .gps-panel { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+    .gps-status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #888; margin-bottom: 12px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #444; flex-shrink: 0; }
+    .dot.active { background: #22c55e; animation: pulse 1.5s infinite; }
+    .dot.error { background: #ef4444; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    .coords-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .coord-box { background: #111; border: 1px solid #2a2a2a; border-radius: 8px; padding: 10px 12px; }
+    .coord-label { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+    .coord-val { font-size: 15px; font-weight: bold; color: #e5e5e5; }
+    .coord-val.waiting { color: #444; font-size: 13px; font-weight: normal; }
+
+    .record-section { display: flex; gap: 8px; margin-bottom: 12px; }
+    .record-section input {
+      flex: 1; background: #1a1a1a; border: 1px solid #333;
+      border-radius: 8px; padding: 0 12px; height: 44px;
+      font-family: monospace; font-size: 14px; color: #e5e5e5;
+    }
+    .record-section input:focus { outline: none; border-color: #555; }
+    .btn-record {
+      height: 44px; padding: 0 16px; background: #1a1a1a;
+      border: 1px solid #333; border-radius: 8px;
+      font-family: monospace; font-size: 13px; font-weight: bold;
+      cursor: pointer; white-space: nowrap; color: #e5e5e5;
+    }
+    .btn-record:active { background: #222; }
+    .btn-record:disabled { opacity: 0.3; cursor: not-allowed; }
+    .btn-record.ok { border-color: #22c55e; color: #22c55e; }
+
+    .points-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .points-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #555; }
+    .btn-export {
+      font-size: 11px; font-family: monospace; background: transparent;
+      border: 1px solid #333; border-radius: 6px; padding: 4px 10px;
+      cursor: pointer; color: #888;
+    }
+    .btn-export:active { background: #1a1a1a; }
+    .btn-export:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .points-list { display: flex; flex-direction: column; gap: 6px; }
+    .point-item {
+      background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px;
+      padding: 10px 12px; display: grid;
+      grid-template-columns: 28px 1fr auto; align-items: center; gap: 10px;
+    }
+    .point-num { font-size: 11px; color: #444; }
+    .point-name { font-size: 13px; font-weight: bold; color: #e5e5e5; }
+    .point-coords { font-size: 11px; color: #666; margin-top: 2px; }
+    .point-acc { font-size: 10px; padding: 2px 7px; border-radius: 99px; font-weight: bold; }
+    .acc-good { background: #052e16; color: #4ade80; }
+    .acc-mid  { background: #422006; color: #fbbf24; }
+    .acc-bad  { background: #3b0a0a; color: #f87171; }
+
+    .empty { font-size: 12px; color: #444; text-align: center; padding: 24px; }
+
+    .btn-delete {
+      background: transparent; border: none; color: #444;
+      font-size: 16px; cursor: pointer; padding: 0 4px; line-height: 1;
+    }
+    .btn-delete:active { color: #ef4444; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <h1>Levé Topo GPS</h1>
+
+  <div class="gps-panel">
+    <div class="gps-status">
+      <div class="dot" id="dot"></div>
+      <span id="gps-status-text">En attente du GPS...</span>
+    </div>
+    <div class="coords-grid">
+      <div class="coord-box">
+        <div class="coord-label">Latitude</div>
+        <div class="coord-val waiting" id="lat">—</div>
+      </div>
+      <div class="coord-box">
+        <div class="coord-label">Longitude</div>
+        <div class="coord-val waiting" id="lon">—</div>
+      </div>
+      <div class="coord-box">
+        <div class="coord-label">Altitude (m)</div>
+        <div class="coord-val waiting" id="alt">—</div>
+      </div>
+      <div class="coord-box">
+        <div class="coord-label">Précision (m)</div>
+        <div class="coord-val waiting" id="acc">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="record-section">
+    <input type="text" id="point-name" placeholder="Nom du point (ex: PT001)" />
+    <button class="btn-record" id="btn-rec" disabled onclick="recordPoint()">+ Enregistrer</button>
+  </div>
+
+  <div class="points-header">
+    <span class="points-title" id="pts-count">0 point enregistré</span>
+    <button class="btn-export" id="btn-csv" disabled onclick="exportCSV()">↓ Exporter CSV</button>
+  </div>
+
+  <div class="points-list" id="points-list">
+    <div class="empty">Aucun point enregistré</div>
+  </div>
+</div>
+
+<script>
+  let pos = null;
+  let points = [];
+  let ptCounter = 1;
+
+  function accClass(acc) {
+    if (acc < 5) return 'acc-good';
+    if (acc < 15) return 'acc-mid';
+    return 'acc-bad';
+  }
+
+  function onPosition(p) {
+    pos = p;
+    document.getElementById('dot').className = 'dot active';
+    document.getElementById('gps-status-text').textContent = 'GPS actif';
+
+    const lat = p.coords.latitude;
+    const lon = p.coords.longitude;
+    const alt = p.coords.altitude;
+    const acc = p.coords.accuracy;
+
+    const lEl = document.getElementById('lat');
+    lEl.textContent = lat.toFixed(6);
+    lEl.className = 'coord-val';
+
+    const oEl = document.getElementById('lon');
+    oEl.textContent = lon.toFixed(6);
+    oEl.className = 'coord-val';
+
+    const aEl = document.getElementById('alt');
+    aEl.textContent = alt !== null ? Math.round(alt) + ' m' : 'N/D';
+    aEl.className = 'coord-val';
+
+    const cEl = document.getElementById('acc');
+    cEl.textContent = acc.toFixed(1) + ' m';
+    cEl.className = 'coord-val';
+
+    document.getElementById('btn-rec').disabled = false;
+  }
+
+  function onError(e) {
+    document.getElementById('dot').className = 'dot error';
+    const msgs = { 1: 'Accès GPS refusé', 2: 'GPS indisponible', 3: 'Délai dépassé' };
+    document.getElementById('gps-status-text').textContent = msgs[e.code] || 'Erreur GPS';
+  }
+
+	if (navigator.geolocation) {
+		const startGPS = () => {
+		  navigator.geolocation.watchPosition(onPosition, onError, {
+			enableHighAccuracy: true,
+			maximumAge: 0,
+			timeout: 10000
+		  });
+		};
+		startGPS();
+		// Relance au clic si le navigateur attend une interaction
+		document.body.addEventListener('click', startGPS, { once: true });
+	  } else {
+    document.getElementById('gps-status-text').textContent = 'GPS non supporté';
+    document.getElementById('dot').className = 'dot error';
+  }
+
+  function recordPoint() {
+    if (!pos) return;
+    const nameInput = document.getElementById('point-name');
+    const name = nameInput.value.trim() || ('PT' + String(ptCounter).padStart(3, '0'));
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
+    const alt = pos.coords.altitude;
+    const acc = pos.coords.accuracy;
+    const ts = new Date().toISOString();
+
+    points.push({ num: ptCounter, name, lat, lon, alt, acc, ts });
+    ptCounter++;
+    nameInput.value = '';
+    renderPoints();
+
+    document.getElementById('btn-csv').disabled = false;
+    const btn = document.getElementById('btn-rec');
+    btn.textContent = '✓ Enregistré';
+    btn.className = 'btn-record ok';
+    setTimeout(() => {
+      btn.textContent = '+ Enregistrer';
+      btn.className = 'btn-record';
+    }, 1200);
+  }
+
+  function deletePoint(num) {
+    points = points.filter(p => p.num !== num);
+    renderPoints();
+    if (points.length === 0) document.getElementById('btn-csv').disabled = true;
+  }
+
+  function renderPoints() {
+    const list = document.getElementById('points-list');
+    const n = points.length;
+    document.getElementById('pts-count').textContent =
+      n + ' point' + (n > 1 ? 's' : '') + ' enregistré' + (n > 1 ? 's' : '');
+    list.innerHTML = '';
+    if (n === 0) {
+      list.innerHTML = '<div class="empty">Aucun point enregistré</div>';
+      return;
+    }
+    [...points].reverse().forEach(pt => {
+      const altStr = pt.alt !== null && pt.alt !== undefined
+        ? pt.alt.toFixed(1) + ' m' : 'alt N/D';
+      const div = document.createElement('div');
+      div.className = 'point-item';
+      div.innerHTML =
+        '<span class="point-num">#' + pt.num + '</span>' +
+        '<div>' +
+          '<div class="point-name">' + pt.name + '</div>' +
+          '<div class="point-coords">' +
+            pt.lat.toFixed(6) + ', ' + pt.lon.toFixed(6) +
+            ' — ' + altStr +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:6px">' +
+          '<span class="point-acc ' + accClass(pt.acc) + '">±' + pt.acc.toFixed(1) + 'm</span>' +
+          '<button class="btn-delete" onclick="deletePoint(' + pt.num + ')">×</button>' +
+        '</div>';
+      list.appendChild(div);
+    });
+  }
+
+  function exportCSV() {
+    const BOM = '\uFEFF';
+    const header = 'num,nom,latitude,longitude,altitude_m,precision_m,horodatage\n';
+    const rows = points.map(p =>
+      p.num + ',"' + p.name + '",' +
+      p.lat.toFixed(8) + ',' +
+      p.lon.toFixed(8) + ',' +
+      (p.alt !== null && p.alt !== undefined ? p.alt.toFixed(3) : '') + ',' +
+      p.acc.toFixed(3) + ',' +
+      p.ts
+    ).join('\n');
+    const blob = new Blob([BOM + header + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'leve_topo_' + new Date().toISOString().slice(0, 10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+</script>
+</body>
+</html>
