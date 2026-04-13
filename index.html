@@ -3,124 +3,155 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Topo Pro - Système de Dossiers</title>
+  <title>Topo Pro - Explorateur de Dossiers</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
     body { font-family: 'Segoe UI', Roboto, sans-serif; background: #0a0a0a; color: #e5e5e5; min-height: 100vh; }
-    .screen { display: none; padding: 20px; max-width: 500px; margin: 0 auto; }
+    .screen { display: none; padding: 15px; max-width: 500px; margin: 0 auto; }
     .active { display: block; }
 
-    /* Accueil */
-    .setup-card { background: #1a1a1a; padding: 25px; border-radius: 15px; border: 1px solid #333; text-align: center; }
-    h2 { margin-bottom: 20px; font-size: 18px; color: #4ade80; text-transform: uppercase; }
+    /* Page Accueil */
+    h2 { font-size: 13px; color: #888; text-transform: uppercase; margin: 20px 0 10px; letter-spacing: 1px; }
+    .setup-box { background: #1a1a1a; padding: 20px; border-radius: 12px; border: 1px solid #333; text-align: center; margin-bottom: 20px; }
     
+    /* Liste des dossiers physiques */
+    .folder-item { 
+      background: #161616; border: 1px solid #222; border-radius: 10px; 
+      padding: 15px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px;
+      cursor: pointer;
+    }
+    .folder-icon { color: #fbbf24; font-size: 20px; }
+    .folder-name { font-weight: bold; font-size: 15px; color: #fff; }
+
     /* Dashboard */
-    .dashboard { background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 15px; margin-bottom: 15px; position: sticky; top: 10px; }
-    .main-coords { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; text-align: center; border-bottom: 1px solid #333; padding-bottom: 12px; margin-bottom: 12px; }
-    .precision-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .label { font-size: 10px; color: #888; text-transform: uppercase; margin-bottom: 4px; font-weight: bold; }
+    .dashboard { background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
+    .main-coords { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; text-align: center; }
     .val { font-size: 15px; font-weight: 900; color: #fff; font-family: monospace; }
-    .acc-box { background: #111; padding: 8px; border-radius: 6px; text-align: center; border: 1px solid #222; }
-    .acc-val { font-size: 12px; font-weight: bold; font-family: monospace; }
-    .good { color: #4ade80; } .warn { color: #fbbf24; } .crit { color: #f87171; }
+    .label { font-size: 10px; color: #888; text-transform: uppercase; }
 
-    /* Inputs */
-    input { width: 100%; background: #1a1a1a; border: 2px solid #333; border-radius: 10px; padding: 12px; color: #fff; font-size: 16px; margin-bottom: 15px; }
-    .btn { background: #4ade80; color: #000; border: none; border-radius: 10px; padding: 15px 25px; font-weight: 900; cursor: pointer; width: 100%; font-size: 16px; text-transform: uppercase; }
-    
+    /* Inputs & UI */
+    input { width: 100%; background: #1a1a1a; border: 2px solid #333; border-radius: 10px; padding: 12px; color: #fff; font-size: 16px; margin-bottom: 10px; }
+    .btn { background: #4ade80; color: #000; border: none; border-radius: 10px; padding: 14px; font-weight: 900; cursor: pointer; width: 100%; text-transform: uppercase; }
+    .btn-secondary { background: #333; color: #fff; font-size: 12px; padding: 8px 15px; border-radius: 6px; border: none; cursor: pointer; }
+
     .record-section { display: flex; gap: 8px; margin-bottom: 15px; }
-    .record-section input { margin-bottom: 0; flex: 1; font-size: 20px; border-color: #444; }
-    .btn-ok { width: auto; padding: 0 30px; }
-
-    .status-bar { font-size: 11px; color: #666; margin-bottom: 10px; display: flex; justify-content: space-between; }
-    .points-list { display: flex; flex-direction: column; gap: 8px; }
-    .point-item { background: #161616; border: 1px solid #222; border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .record-section input { margin-bottom: 0; flex: 1; font-size: 20px; }
+    .btn-ok { width: auto; padding: 0 30px; background: #4ade80; border-radius: 10px; border: none; font-weight: 900; }
   </style>
 </head>
 <body>
 
   <div id="screen-start" class="screen active">
-    <div class="setup-card">
+    <div class="setup-box" id="init-box">
+      <p style="margin-bottom:15px; font-size:14px">Sélectionnez votre dossier racine <b>"topo"</b></p>
+      <button class="btn" onclick="selectRootFolder()">Ouvrir Dossier Topo</button>
+    </div>
+
+    <div id="project-controls" style="display:none">
       <h2>Nouveau Projet</h2>
-      <input type="text" id="project-name" placeholder="NOM DU PROJET" inputmode="text">
-      <p style="font-size: 12px; color: #888; margin-bottom: 20px;">
-        Cliquez ci-dessous pour choisir votre dossier "topo".<br>Un sous-dossier au nom du projet sera créé.
-      </p>
-      <button class="btn" onclick="startSystem()">Sélectionner Dossier & Créer</button>
+      <div style="display:flex; gap:8px; margin-bottom:20px">
+        <input type="text" id="new-project-name" placeholder="Nom du dossier..." style="margin-bottom:0">
+        <button class="btn" style="width:auto" onclick="createNewProject()">Créer</button>
+      </div>
+
+      <h2>Dossiers trouvés dans /topo</h2>
+      <div id="folder-list">
+        </div>
     </div>
   </div>
 
   <div id="screen-topo" class="screen">
-    <div class="status-bar">
-      <span>PROJET: <b id="display-project-name" style="color:#4ade80"></b></span>
-      <span id="sync-status" style="color:#888">Initialisation...</span>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
+      <div>
+        <small style="color:#666">DOSSIER :</small><br>
+        <span id="current-folder-display" style="color:#4ade80; font-weight:bold"></span>
+      </div>
+      <button class="btn-secondary" onclick="location.reload()">Changer Dossier</button>
     </div>
-    
+
     <div class="dashboard">
       <div class="main-coords">
-        <div><div class="label">Est (X)</div><div class="val" id="x-val">—</div></div>
-        <div><div class="label">Nord (Y)</div><div class="val" id="y-val">—</div></div>
-        <div><div class="label">Alt (Z)</div><div class="val" id="z-val">—</div></div>
-      </div>
-      <div class="precision-bar">
-        <div class="acc-box"><div class="label">Préc. XY</div><div class="acc-val" id="acc-h">—</div></div>
-        <div class="acc-box"><div class="label">Préc. Z</div><div class="acc-val" id="acc-v">—</div></div>
+        <div><div class="label">X (L93)</div><div class="val" id="x-val">—</div></div>
+        <div><div class="label">Y (L93)</div><div class="val" id="y-val">—</div></div>
+        <div><div class="label">Z (Alt)</div><div class="val" id="z-val">—</div></div>
       </div>
     </div>
 
     <div class="record-section">
-      <input type="text" id="pt-name" placeholder="N° POINT" inputmode="decimal" enterkeyhint="done">
-      <button class="btn btn-ok" id="btn-rec" disabled onclick="record()">OK</button>
+      <input type="text" id="pt-name" placeholder="N°" inputmode="decimal" enterkeyhint="done">
+      <button class="btn-ok" id="btn-rec" disabled onclick="recordPoint()">OK</button>
     </div>
 
-    <div id="list" class="points-list"></div>
+    <div id="list" style="display:flex; flex-direction:column; gap:8px"></div>
   </div>
 
 <script>
   const EPSG2154 = "+proj=lcc +lat_1=49 +lat_2=44 +lat_0=46.5 +lon_0=3 +x_0=700000 +y_0=6600000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs";
+  let rootHandle = null;
+  let currentFileHandle = null;
   let lastPos = null;
-  let points = [];
-  let projectHandle = null;
-  let fileHandle = null;
 
-  async function startSystem() {
-    const pName = document.getElementById('project-name').value.trim();
-    if (!pName) return alert("Nom du projet manquant");
-
+  // 1. Sélection du dossier racine "topo"
+  async function selectRootFolder() {
     try {
-      // 1. Sélection du dossier parent "topo" par l'utilisateur
-      const parentHandle = await window.showDirectoryPicker();
-      
-      // 2. Création du sous-dossier au nom du projet
-      projectHandle = await parentHandle.getDirectoryHandle(pName, { create: true });
-      
-      // 3. Création du fichier de données (Format CSV pour compatibilité topo directe)
-      fileHandle = await projectHandle.getFileHandle(`${pName}.csv`, { create: true });
-      
-      // Initialiser le header si fichier vide
-      const file = await fileHandle.getFile();
-      if (file.size === 0) {
-        await writeToFile("Nom,X_L93,Y_L93,Z_Ellipsoide,Precision_H,Horodatage\n");
-      }
-
-      document.getElementById('display-project-name').textContent = pName;
-      document.getElementById('screen-start').classList.remove('active');
-      document.getElementById('screen-topo').classList.add('active');
-      document.getElementById('sync-status').textContent = "Auto-save actif";
-      
-      initGPS();
-      document.getElementById('pt-name').focus();
+      rootHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+      document.getElementById('init-box').style.display = 'none';
+      document.getElementById('project-controls').style.display = 'block';
+      scanFolders();
     } catch (err) {
-      alert("L'accès au dossier est requis pour l'enregistrement automatique.");
-      console.error(err);
+      alert("Accès refusé ou non supporté.");
     }
   }
 
-  async function writeToFile(content) {
-    const writable = await fileHandle.createWritable({ keepExistingData: true });
-    const file = await fileHandle.getFile();
-    await writable.write({ type: 'write', position: file.size, data: content });
+  // 2. Scanner les sous-dossiers existants
+  async function scanFolders() {
+    const listCont = document.getElementById('folder-list');
+    listCont.innerHTML = '';
+    
+    for await (const entry of rootHandle.values()) {
+      if (entry.kind === 'directory') {
+        const div = document.createElement('div');
+        div.className = 'folder-item';
+        div.onclick = () => openProject(entry.name);
+        div.innerHTML = `<span class="folder-icon">📁</span> <span class="folder-name">${entry.name}</span>`;
+        listCont.appendChild(div);
+      }
+    }
+  }
+
+  // 3. Créer un nouveau sous-dossier
+  async function createNewProject() {
+    const name = document.getElementById('new-project-name').value.trim();
+    if (!name) return;
+    await rootHandle.getDirectoryHandle(name, { create: true });
+    document.getElementById('new-project-name').value = '';
+    scanFolders();
+  }
+
+  // 4. Ouvrir un projet (créer/ouvrir le fichier CSV dedans)
+  async function openProject(folderName) {
+    const projectFolder = await rootHandle.getDirectoryHandle(folderName);
+    currentFileHandle = await projectFolder.getFileHandle(`${folderName}.csv`, { create: true });
+    
+    // Initialiser le header si vide
+    const file = await currentFileHandle.getFile();
+    if (file.size === 0) {
+      await writeLine("Nom,X_L93,Y_L93,Z_Ellipsoide,Heure\n");
+    }
+
+    document.getElementById('current-folder-display').textContent = folderName;
+    document.getElementById('screen-start').classList.remove('active');
+    document.getElementById('screen-topo').classList.add('active');
+    
+    initGPS();
+    document.getElementById('pt-name').focus();
+  }
+
+  async function writeLine(text) {
+    const writable = await currentFileHandle.createWritable({ keepExistingData: true });
+    const file = await currentFileHandle.getFile();
+    await writable.write({ type: 'write', position: file.size, data: text });
     await writable.close();
   }
 
@@ -131,59 +162,33 @@
       document.getElementById('x-val').textContent = l93[0].toFixed(2);
       document.getElementById('y-val').textContent = l93[1].toFixed(2);
       document.getElementById('z-val').textContent = p.coords.altitude ? p.coords.altitude.toFixed(2) : 'N/D';
-      
-      const hAcc = p.coords.accuracy;
-      const hEl = document.getElementById('acc-h');
-      hEl.textContent = `± ${hAcc.toFixed(1)}m`;
-      hEl.className = 'acc-val ' + (hAcc < 3 ? 'good' : hAcc < 10 ? 'warn' : 'crit');
-      
       document.getElementById('btn-rec').disabled = false;
     }, null, { enableHighAccuracy: true });
   }
 
-  async function record() {
-    if(!lastPos) return;
+  async function recordPoint() {
+    if (!lastPos || !currentFileHandle) return;
     const nameInput = document.getElementById('pt-name');
-    const name = nameInput.value.trim() || (points.length + 1);
+    const name = nameInput.value.trim() || Date.now();
     const l93 = proj4("WGS84", EPSG2154, [lastPos.coords.longitude, lastPos.coords.latitude]);
-    
-    const pt = {
-      name, x: l93[0].toFixed(3), y: l93[1].toFixed(3), 
-      z: lastPos.coords.altitude ? lastPos.coords.altitude.toFixed(3) : '',
-      acc: lastPos.coords.accuracy.toFixed(2),
-      ts: new Date().toLocaleTimeString()
-    };
+    const z = lastPos.coords.altitude ? lastPos.coords.altitude.toFixed(3) : '';
+    const time = new Date().toLocaleTimeString();
 
-    // 1. Enregistrement physique immédiat
-    const csvLine = `${pt.name},${pt.x},${pt.y},${pt.z},${pt.acc},${pt.ts}\n`;
-    try {
-      await writeToFile(csvLine);
-      document.getElementById('sync-status').textContent = "Dernier point sauvé à " + pt.ts;
-      document.getElementById('sync-status').style.color = "#4ade80";
-    } catch (e) {
-      document.getElementById('sync-status').textContent = "Erreur sauvegarde !";
-      document.getElementById('sync-status').style.color = "#ef4444";
-    }
+    const line = `${name},${l93[0].toFixed(3)},${l93[1].toFixed(3)},${z},${time}\n`;
+    await writeLine(line);
 
-    // 2. Mise à jour de la liste visuelle
-    points.push(pt);
+    // Affichage rapide du dernier point
+    const item = document.createElement('div');
+    item.style = "background:#161616; padding:10px; border-radius:8px; border-left:4px solid #4ade80; font-size:13px";
+    item.innerHTML = `<b>${name}</b> | X:${l93[0].toFixed(2)} Y:${l93[1].toFixed(2)}`;
+    const list = document.getElementById('list');
+    list.insertBefore(item, list.firstChild);
+
     nameInput.value = '';
-    render();
     setTimeout(() => nameInput.focus(), 50);
   }
 
-  function render() {
-    const cont = document.getElementById('list');
-    cont.innerHTML = '';
-    [...points].reverse().slice(0, 10).forEach(p => {
-      const d = document.createElement('div');
-      d.className = 'point-item';
-      d.innerHTML = `<div><b style="color:#4ade80">${p.name}</b><br><small style="color:#666">X:${p.x} Y:${p.y} Z:${p.z}</small></div>`;
-      cont.appendChild(d);
-    });
-  }
-
-  document.getElementById('pt-name').addEventListener('keypress', e => { if (e.key === 'Enter') record(); });
+  document.getElementById('pt-name').addEventListener('keypress', e => { if (e.key === 'Enter') recordPoint(); });
 </script>
 </body>
 </html>
