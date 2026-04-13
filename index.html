@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Topo Pro - Accès Direct</title>
+  <title>Topo Pro - Zero Perms</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
@@ -11,177 +11,164 @@
     .screen { display: none; padding: 15px; max-width: 500px; margin: 0 auto; }
     .active { display: block; }
 
-    /* Header Statut */
-    .storage-status { font-size: 11px; padding: 10px; background: #111; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-    .status-ok { background: #4ade80; }
-    .status-no { background: #ef4444; }
-
     /* Accueil */
-    h2 { font-size: 12px; color: #666; text-transform: uppercase; margin: 20px 0 10px; letter-spacing: 1px; }
-    .project-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
-    .folder-item { 
-      background: #1a1a1a; border: 1px solid #333; border-radius: 12px; 
-      padding: 16px; display: flex; align-items: center; gap: 12px; cursor: pointer;
+    h2 { font-size: 11px; color: #666; text-transform: uppercase; margin: 20px 0 10px; letter-spacing: 1px; }
+    .card { background: #1a1a1a; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 20px; }
+    
+    .project-item { 
+      background: #161616; border: 1px solid #222; border-radius: 10px; 
+      padding: 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;
     }
-    .folder-item:active { background: #222; }
-    .folder-icon { font-size: 20px; }
 
     /* Dashboard */
     .dashboard { background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
     .main-coords { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; text-align: center; }
-    .val { font-size: 15px; font-weight: 900; color: #fff; font-family: monospace; }
+    .val { font-size: 16px; font-weight: 900; color: #fff; font-family: monospace; }
     .label { font-size: 9px; color: #888; text-transform: uppercase; }
 
-    /* Saisie */
-    input { width: 100%; background: #1a1a1a; border: 2px solid #333; border-radius: 10px; padding: 14px; color: #fff; font-size: 16px; }
-    .btn-add { background: #4ade80; color: #000; border: none; border-radius: 10px; padding: 15px; font-weight: 900; cursor: pointer; width: 100%; text-transform: uppercase; margin-top: 10px; }
+    /* UI */
+    input { width: 100%; background: #000; border: 2px solid #333; border-radius: 10px; padding: 14px; color: #fff; font-size: 16px; }
+    .btn { background: #4ade80; color: #000; border: none; border-radius: 10px; padding: 15px; font-weight: 900; cursor: pointer; text-transform: uppercase; }
+    .btn-small { padding: 6px 12px; font-size: 11px; background: #333; color: #fff; }
     
     .record-section { display: flex; gap: 8px; margin-top: 10px; }
-    .record-section input { margin-bottom: 0; flex: 1; font-size: 22px; border-color: #444; }
-    .btn-ok { width: 80px; background: #4ade80; border-radius: 10px; border: none; font-weight: 900; font-size: 18px; }
+    .record-section input { flex: 1; font-size: 22px; border-color: #444; }
   </style>
 </head>
 <body>
 
-  <div class="storage-status">
-    <span><span id="storage-dot" class="status-dot status-no"></span> DOSSIER TOPO : <b id="root-path">DÉCONNECTÉ</b></span>
-    <button id="btn-reconnect" onclick="connectStorage()" style="background:none; border:1px solid #444; color:#888; font-size:10px; padding:2px 6px; border-radius:4px">ACTIVER</button>
-  </div>
-
   <div id="screen-start" class="screen active">
-    <h2>Nouveau Chantier</h2>
-    <input type="text" id="new-project-name" placeholder="Nom du nouveau projet..." inputmode="text">
-    <button class="btn-add" onclick="createNewProject()">Créer le dossier projet</button>
+    <h2>Nouveau Projet</h2>
+    <div class="card">
+      <input type="text" id="new-name" placeholder="Nom du chantier..." style="margin-bottom:10px">
+      <button class="btn" style="width:100%" onclick="addProject()">Créer Projet</button>
+    </div>
 
-    <h2>Projets dans /topo</h2>
-    <div id="folder-list" class="project-grid">
-      </div>
+    <h2>Chantiers en mémoire</h2>
+    <div id="project-list"></div>
   </div>
 
   <div id="screen-topo" class="screen">
-    <div style="display:flex; justify-content:space-between; margin-bottom:15px">
-      <b id="current-project-display" style="color:#4ade80"></b>
-      <span onclick="location.reload()" style="font-size:11px; color:#666">RETOUR</span>
+    <div style="display:flex; justify-content:space-between; margin-bottom:15px; align-items:center">
+      <b id="cur-name" style="color:#4ade80"></b>
+      <button class="btn-small" onclick="location.reload()">Menu</button>
     </div>
 
     <div class="dashboard">
       <div class="main-coords">
-        <div><div class="label">X (L93)</div><div class="val" id="x-val">—</div></div>
-        <div><div class="label">Y (L93)</div><div class="val" id="y-val">—</div></div>
-        <div><div class="label">Z (Alt)</div><div class="val" id="z-val">—</div></div>
+        <div><div class="label">X</div><div class="val" id="x-v">—</div></div>
+        <div><div class="label">Y</div><div class="val" id="y-v">—</div></div>
+        <div><div class="label">Z</div><div class="val" id="z-v">—</div></div>
       </div>
     </div>
 
     <div class="record-section">
-      <input type="text" id="pt-name" placeholder="Point" inputmode="decimal" enterkeyhint="done">
-      <button class="btn-ok" id="btn-rec" disabled onclick="recordPoint()">OK</button>
+      <input type="text" id="pt-name" placeholder="N°" inputmode="decimal">
+      <button class="btn" id="btn-rec" disabled onclick="recordPoint()">OK</button>
     </div>
 
-    <div id="list" style="margin-top:20px; display:flex; flex-direction:column; gap:8px"></div>
+    <button class="btn" style="width:100%; margin-top:10px; background:#333; color:#fff" onclick="exportCSV()">Exporter vers /topo</button>
+    
+    <div id="pt-list" style="margin-top:20px; display:flex; flex-direction:column; gap:6px"></div>
   </div>
 
 <script>
   const EPSG2154 = "+proj=lcc +lat_1=49 +lat_2=44 +lat_0=46.5 +lon_0=3 +x_0=700000 +y_0=6600000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs";
-  let topoHandle = null;
-  let currentFileHandle = null;
-  let lastPos = null;
+  let db, curProj, lastPos;
 
-  // Connection au dossier "topo" par défaut
-  async function connectStorage() {
-    try {
-      // On demande à l'utilisateur de pointer sur le dossier "topo"
-      topoHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-      
-      document.getElementById('storage-dot').className = 'status-dot status-ok';
-      document.getElementById('root-path').textContent = "ACTIF";
-      document.getElementById('btn-reconnect').style.display = 'none';
-      
-      scanProjects();
-    } catch (err) {
-      console.log("Accès refusé");
-    }
+  // Initialisation de la base de données interne (IndexedDB)
+  const request = indexedDB.open("TopoDB", 1);
+  request.onupgradeneeded = e => e.target.result.createObjectStore("projects", { keyPath: "name" });
+  request.onsuccess = e => { db = e.target.result; loadProjects(); };
+
+  function loadProjects() {
+    const list = document.getElementById('project-list');
+    list.innerHTML = '';
+    db.transaction("projects").objectStore("projects").getAll().onsuccess = e => {
+      e.target.result.reverse().forEach(p => {
+        const d = document.createElement('div');
+        d.className = 'project-item';
+        d.innerHTML = `<div onclick="openProj('${p.name}')"><b>${p.name}</b><br><small style="color:#666">${p.points.length} points</small></div>
+                       <button class="btn-small" style="background:#522" onclick="deleteProj('${p.name}')">×</button>`;
+        list.appendChild(d);
+      });
+    };
   }
 
-  async function scanProjects() {
-    const listCont = document.getElementById('folder-list');
-    listCont.innerHTML = '';
-    
-    for await (const entry of topoHandle.values()) {
-      if (entry.kind === 'directory') {
-        const div = document.createElement('div');
-        div.className = 'folder-item';
-        div.onclick = () => openProject(entry.name);
-        div.innerHTML = `<span class="folder-icon">📂</span> <b>${entry.name}</b>`;
-        listCont.appendChild(div);
-      }
-    }
+  function addProject() {
+    const name = document.getElementById('new-name').value.trim();
+    if(!name) return;
+    const proj = { name, points: [] };
+    db.transaction("projects", "readwrite").objectStore("projects").add(proj).onsuccess = () => {
+      document.getElementById('new-name').value = '';
+      openProj(name);
+    };
   }
 
-  async function createNewProject() {
-    if (!topoHandle) return alert("Veuillez d'abord cliquer sur ACTIVER pour lier le dossier topo.");
-    const name = document.getElementById('new-project-name').value.trim();
-    if (!name) return;
-    await topoHandle.getDirectoryHandle(name, { create: true });
-    document.getElementById('new-project-name').value = '';
-    scanProjects();
-  }
-
-  async function openProject(name) {
-    const projectFolder = await topoHandle.getDirectoryHandle(name);
-    currentFileHandle = await projectFolder.getFileHandle(`${name}.csv`, { create: true });
-    
-    const file = await currentFileHandle.getFile();
-    if (file.size === 0) {
-      await writeLine("Nom,X,Y,Z,Heure\n");
-    }
-
-    document.getElementById('current-project-display').textContent = name;
-    document.getElementById('screen-start').classList.remove('active');
-    document.getElementById('screen-topo').classList.add('active');
-    
-    initGPS();
-    document.getElementById('pt-name').focus();
-  }
-
-  async function writeLine(text) {
-    const writable = await currentFileHandle.createWritable({ keepExistingData: true });
-    const file = await currentFileHandle.getFile();
-    await writable.write({ type: 'write', position: file.size, data: text });
-    await writable.close();
+  function openProj(name) {
+    db.transaction("projects").objectStore("projects").get(name).onsuccess = e => {
+      curProj = e.target.result;
+      document.getElementById('cur-name').textContent = name;
+      document.getElementById('screen-start').classList.remove('active');
+      document.getElementById('screen-topo').classList.add('active');
+      renderPoints();
+      initGPS();
+      document.getElementById('pt-name').focus();
+    };
   }
 
   function initGPS() {
     navigator.geolocation.watchPosition(p => {
       lastPos = p;
       const l93 = proj4("WGS84", EPSG2154, [p.coords.longitude, p.coords.latitude]);
-      document.getElementById('x-val').textContent = l93[0].toFixed(2);
-      document.getElementById('y-val').textContent = l93[1].toFixed(2);
-      document.getElementById('z-val').textContent = p.coords.altitude ? p.coords.altitude.toFixed(2) : 'N/D';
+      document.getElementById('x-v').textContent = l93[0].toFixed(2);
+      document.getElementById('y-v').textContent = l93[1].toFixed(2);
+      document.getElementById('z-v').textContent = p.coords.altitude ? p.coords.altitude.toFixed(2) : 'N/D';
       document.getElementById('btn-rec').disabled = false;
     }, null, { enableHighAccuracy: true });
   }
 
-  async function recordPoint() {
-    if (!lastPos || !currentFileHandle) return;
-    const nameInput = document.getElementById('pt-name');
-    const name = nameInput.value.trim() || Date.now();
+  function recordPoint() {
+    const input = document.getElementById('pt-name');
     const l93 = proj4("WGS84", EPSG2154, [lastPos.coords.longitude, lastPos.coords.latitude]);
-    const z = lastPos.coords.altitude ? lastPos.coords.altitude.toFixed(3) : '';
-    
-    await writeLine(`${name},${l93[0].toFixed(3)},${l93[1].toFixed(3)},${z},${new Date().toLocaleTimeString()}\n`);
-
-    const item = document.createElement('div');
-    item.style = "background:#161616; padding:12px; border-radius:10px; border-left:4px solid #4ade80; font-size:13px";
-    item.innerHTML = `<b>${name}</b> | ${l93[0].toFixed(2)} / ${l93[1].toFixed(2)}`;
-    const list = document.getElementById('list');
-    list.insertBefore(item, list.firstChild);
-
-    nameInput.value = '';
-    setTimeout(() => nameInput.focus(), 50);
+    const pt = {
+      n: input.value || (curProj.points.length + 1),
+      x: l93[0].toFixed(3), y: l93[1].toFixed(3),
+      z: lastPos.coords.altitude ? lastPos.coords.altitude.toFixed(3) : ''
+    };
+    curProj.points.push(pt);
+    db.transaction("projects", "readwrite").objectStore("projects").put(curProj);
+    input.value = '';
+    renderPoints();
+    setTimeout(() => input.focus(), 50);
   }
 
-  document.getElementById('pt-name').addEventListener('keypress', e => { if (e.key === 'Enter') recordPoint(); });
+  function renderPoints() {
+    const list = document.getElementById('pt-list');
+    list.innerHTML = '';
+    [...curProj.points].reverse().slice(0, 5).forEach(p => {
+      const d = document.createElement('div');
+      d.style = "background:#161616; padding:10px; border-radius:8px; font-size:12px; border-left:3px solid #4ade80";
+      d.innerHTML = `<b>${p.n}</b> | X:${p.x} Y:${p.y} Z:${p.z}`;
+      list.appendChild(d);
+    });
+  }
+
+  function exportCSV() {
+    let csv = "\uFEFFNom,X,Y,Z\n" + curProj.points.map(p => `${p.n},${p.x},${p.y},${p.z}`).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+    a.download = `${curProj.name}.csv`;
+    a.click();
+  }
+
+  function deleteProj(name) {
+    if(confirm("Supprimer ?")) {
+      db.transaction("projects", "readwrite").objectStore("projects").delete(name).onsuccess = loadProjects;
+    }
+  }
+
+  document.getElementById('pt-name').addEventListener('keypress', e => { if(e.key==='Enter') recordPoint(); });
 </script>
 </body>
 </html>
