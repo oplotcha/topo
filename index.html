@@ -2,265 +2,287 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Levé Topo GPS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Topo Pro - RGF93 / L93</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: monospace; background: #111; color: #e5e5e5; min-height: 100vh; }
-    .app { max-width: 480px; margin: 0 auto; padding: 14px; }
-    h1 { font-size: 14px; letter-spacing: 0.1em; color: #888; text-transform: uppercase; margin-bottom: 14px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
+    body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #0a0a0a; color: #e5e5e5; min-height: 100vh; overflow-x: hidden; }
+    .app { max-width: 500px; margin: 0 auto; padding: 10px; }
 
-    .gps-panel { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
-    .gps-status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #888; margin-bottom: 12px; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: #444; flex-shrink: 0; }
-    .dot.active { background: #22c55e; animation: pulse 1.5s infinite; }
-    .dot.error { background: #ef4444; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    /* Bandeau de bord supérieur */
+    .dashboard {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 15px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .main-coords {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      text-align: center;
+      border-bottom: 1px solid #333;
+      padding-bottom: 12px;
+      margin-bottom: 12px;
+    }
+    .precision-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .label { font-size: 10px; color: #888; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 1px; font-weight: bold; }
+    .val { font-size: 16px; font-weight: 900; color: #fff; font-family: monospace; }
+    
+    .acc-box { background: #111; padding: 8px; border-radius: 6px; text-align: center; border: 1px solid #222; }
+    .acc-val { font-size: 12px; font-weight: bold; font-family: monospace; }
+    .good { color: #4ade80; }
+    .warn { color: #fbbf24; }
+    .crit { color: #f87171; }
 
-    .coords-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .coord-box { background: #111; border: 1px solid #2a2a2a; border-radius: 8px; padding: 10px 12px; }
-    .coord-label { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
-    .coord-val { font-size: 15px; font-weight: bold; color: #e5e5e5; }
-    .coord-val.waiting { color: #444; font-size: 13px; font-weight: normal; }
+    /* Infos GPS et Status */
+    .gps-info { font-size: 11px; color: #555; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; padding-left: 5px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #444; }
+    .dot.active { background: #22c55e; box-shadow: 0 0 8px #22c55e; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 
-    .record-section { display: flex; gap: 8px; margin-bottom: 12px; }
+    /* Zone de saisie */
+    .record-section { display: flex; gap: 8px; margin-bottom: 15px; }
     .record-section input {
-      flex: 1; background: #1a1a1a; border: 1px solid #333;
-      border-radius: 8px; padding: 0 12px; height: 44px;
-      font-family: monospace; font-size: 14px; color: #e5e5e5;
+      flex: 1; background: #1a1a1a; border: 2px solid #333;
+      border-radius: 10px; padding: 12px; color: #fff; font-size: 18px;
+      font-family: monospace;
     }
-    .record-section input:focus { outline: none; border-color: #555; }
+    .record-section input:focus { border-color: #555; outline: none; background: #222; }
     .btn-record {
-      height: 44px; padding: 0 16px; background: #1a1a1a;
-      border: 1px solid #333; border-radius: 8px;
-      font-family: monospace; font-size: 13px; font-weight: bold;
-      cursor: pointer; white-space: nowrap; color: #e5e5e5;
+      background: #22c55e; color: #000; border: none; border-radius: 10px;
+      padding: 0 25px; font-weight: 900; cursor: pointer; font-size: 16px;
     }
-    .btn-record:active { background: #222; }
-    .btn-record:disabled { opacity: 0.3; cursor: not-allowed; }
-    .btn-record.ok { border-color: #22c55e; color: #22c55e; }
+    .btn-record:active { background: #16a34a; transform: scale(0.98); }
+    .btn-record:disabled { background: #222; color: #555; cursor: not-allowed; }
 
-    .points-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-    .points-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #555; }
-    .btn-export {
-      font-size: 11px; font-family: monospace; background: transparent;
-      border: 1px solid #333; border-radius: 6px; padding: 4px 10px;
-      cursor: pointer; color: #888;
-    }
-    .btn-export:active { background: #1a1a1a; }
-    .btn-export:disabled { opacity: 0.3; cursor: not-allowed; }
-
-    .points-list { display: flex; flex-direction: column; gap: 6px; }
+    /* Liste des points */
+    .points-header { display: flex; justify-content: space-between; align-items: center; padding: 0 5px 8px; border-bottom: 1px solid #222; margin-bottom: 10px; }
+    .count-txt { font-size: 11px; color: #666; text-transform: uppercase; }
+    .points-list { display: flex; flex-direction: column; gap: 8px; }
     .point-item {
-      background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px;
-      padding: 10px 12px; display: grid;
-      grid-template-columns: 28px 1fr auto; align-items: center; gap: 10px;
+      background: #161616; border: 1px solid #222; border-radius: 10px;
+      padding: 12px; display: flex; justify-content: space-between; align-items: center;
+      animation: slideIn 0.3s ease-out;
     }
-    .point-num { font-size: 11px; color: #444; }
-    .point-name { font-size: 13px; font-weight: bold; color: #e5e5e5; }
-    .point-coords { font-size: 11px; color: #666; margin-top: 2px; }
-    .point-acc { font-size: 10px; padding: 2px 7px; border-radius: 99px; font-weight: bold; }
-    .acc-good { background: #052e16; color: #4ade80; }
-    .acc-mid  { background: #422006; color: #fbbf24; }
-    .acc-bad  { background: #3b0a0a; color: #f87171; }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-    .empty { font-size: 12px; color: #444; text-align: center; padding: 24px; }
-
-    .btn-delete {
-      background: transparent; border: none; color: #444;
-      font-size: 16px; cursor: pointer; padding: 0 4px; line-height: 1;
-    }
+    .btn-export { background: transparent; border: 1px solid #444; color: #888; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: bold; }
+    .btn-delete { color: #444; background: none; border: none; font-size: 24px; cursor: pointer; padding: 0 10px; }
     .btn-delete:active { color: #ef4444; }
+    
+    .empty-msg { text-align: center; color: #444; padding: 40px; font-size: 13px; }
   </style>
 </head>
 <body>
-<div class="app">
-  <h1>Levé Topo GPS</h1>
 
-  <div class="gps-panel">
-    <div class="gps-status">
-      <div class="dot" id="dot"></div>
-      <span id="gps-status-text">En attente du GPS...</span>
-    </div>
-    <div class="coords-grid">
-      <div class="coord-box">
-        <div class="coord-label">Latitude</div>
-        <div class="coord-val waiting" id="lat">—</div>
+<div class="app">
+  <div class="dashboard">
+    <div class="main-coords">
+      <div>
+        <div class="label">Est (X)</div>
+        <div class="val" id="x-val">—</div>
       </div>
-      <div class="coord-box">
-        <div class="coord-label">Longitude</div>
-        <div class="coord-val waiting" id="lon">—</div>
+      <div>
+        <div class="label">Nord (Y)</div>
+        <div class="val" id="y-val">—</div>
       </div>
-      <div class="coord-box">
-        <div class="coord-label">Altitude (m)</div>
-        <div class="coord-val waiting" id="alt">—</div>
-      </div>
-      <div class="coord-box">
-        <div class="coord-label">Précision (m)</div>
-        <div class="coord-val waiting" id="acc">—</div>
+      <div>
+        <div class="label">Alt (Z)</div>
+        <div class="val" id="z-val">—</div>
       </div>
     </div>
+    <div class="precision-bar">
+      <div class="acc-box">
+        <div class="label">Préc. Horiz. (XY)</div>
+        <div class="acc-val" id="acc-h">—</div>
+      </div>
+      <div class="acc-box">
+        <div class="label">Préc. Vert. (Z)</div>
+        <div class="acc-val" id="acc-v">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="gps-info">
+    <div id="dot" class="dot"></div>
+    <span id="status">Initialisation du GPS...</span>
   </div>
 
   <div class="record-section">
-    <input type="text" id="point-name" placeholder="Nom du point (ex: PT001)" />
-    <button class="btn-record" id="btn-rec" disabled onclick="recordPoint()">+ Enregistrer</button>
+    <input type="text" 
+           id="pt-name" 
+           placeholder="Nom / N°" 
+           inputmode="decimal" 
+           enterkeyhint="done" />
+    <button class="btn-record" id="btn-rec" disabled onclick="record()">OK</button>
   </div>
 
   <div class="points-header">
-    <span class="points-title" id="pts-count">0 point enregistré</span>
-    <button class="btn-export" id="btn-csv" disabled onclick="exportCSV()">↓ Exporter CSV</button>
+    <span class="count-txt" id="count">0 point enregistré</span>
+    <button class="btn-export" id="btn-csv" disabled onclick="exportCSV()">Exporter CSV</button>
   </div>
 
-  <div class="points-list" id="points-list">
-    <div class="empty">Aucun point enregistré</div>
+  <div id="list" class="points-list">
+    <div class="empty-msg">Prêt pour le levé.</div>
   </div>
 </div>
 
 <script>
-  let pos = null;
+  // Définition Lambert-93 (RGF93)
+  const EPSG2154 = "+proj=lcc +lat_1=49 +lat_2=44 +lat_0=46.5 +lon_0=3 +x_0=700000 +y_0=6600000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs";
+  
+  let lastPos = null;
   let points = [];
   let ptCounter = 1;
 
-  function accClass(acc) {
-    if (acc < 5) return 'acc-good';
-    if (acc < 15) return 'acc-mid';
-    return 'acc-bad';
-  }
+  // Mise à jour de l'affichage en temps réel
+  function updateDisplay(p) {
+    lastPos = p;
+    const l93 = proj4("WGS84", EPSG2154, [p.coords.longitude, p.coords.latitude]);
+    
+    // Coordonnées L93
+    document.getElementById('x-val').textContent = l93[0].toFixed(2);
+    document.getElementById('y-val').textContent = l93[1].toFixed(2);
+    document.getElementById('z-val').textContent = p.coords.altitude ? p.coords.altitude.toFixed(2) : 'N/D';
 
-  function onPosition(p) {
-    pos = p;
+    // Précisions
+    const hAcc = p.coords.accuracy;
+    const vAcc = p.coords.altitudeAccuracy || (hAcc * 1.5); // Estimation si l'API ne renvoie pas la valeur
+
+    const hEl = document.getElementById('acc-h');
+    hEl.textContent = `± ${hAcc.toFixed(1)}m`;
+    hEl.className = 'acc-val ' + (hAcc < 3 ? 'good' : hAcc < 10 ? 'warn' : 'crit');
+
+    const vEl = document.getElementById('acc-v');
+    vEl.textContent = `± ${vAcc.toFixed(1)}m`;
+    vEl.className = 'acc-val ' + (vAcc < 5 ? 'good' : vAcc < 15 ? 'warn' : 'crit');
+
     document.getElementById('dot').className = 'dot active';
-    document.getElementById('gps-status-text').textContent = 'GPS actif';
-
-    const lat = p.coords.latitude;
-    const lon = p.coords.longitude;
-    const alt = p.coords.altitude;
-    const acc = p.coords.accuracy;
-
-    const lEl = document.getElementById('lat');
-    lEl.textContent = lat.toFixed(6);
-    lEl.className = 'coord-val';
-
-    const oEl = document.getElementById('lon');
-    oEl.textContent = lon.toFixed(6);
-    oEl.className = 'coord-val';
-
-    const aEl = document.getElementById('alt');
-    aEl.textContent = alt !== null ? Math.round(alt) + ' m' : 'N/D';
-    aEl.className = 'coord-val';
-
-    const cEl = document.getElementById('acc');
-    cEl.textContent = acc.toFixed(1) + ' m';
-    cEl.className = 'coord-val';
-
+    document.getElementById('status').textContent = 'Signal GPS actif (RGF93/L93)';
     document.getElementById('btn-rec').disabled = false;
   }
 
-  function onError(e) {
-    document.getElementById('dot').className = 'dot error';
-    const msgs = { 1: 'Accès GPS refusé', 2: 'GPS indisponible', 3: 'Délai dépassé' };
-    document.getElementById('gps-status-text').textContent = msgs[e.code] || 'Erreur GPS';
-  }
+  // Enregistrement du point
+  function record() {
+    if(!lastPos) return;
+    
+    const nameInput = document.getElementById('pt-name');
+    const l93 = proj4("WGS84", EPSG2154, [lastPos.coords.longitude, lastPos.coords.latitude]);
+    
+    // Si vide, on incrémente automatiquement
+    const name = nameInput.value.trim() || ptCounter;
+    
+    const pt = {
+      id: Date.now(),
+      name: name,
+      x: l93[0],
+      y: l93[1],
+      z: lastPos.coords.altitude,
+      accH: lastPos.coords.accuracy,
+      accV: lastPos.coords.altitudeAccuracy || (lastPos.coords.accuracy * 1.5),
+      ts: new Date().toISOString()
+    };
 
-	if (navigator.geolocation) {
-		const startGPS = () => {
-		  navigator.geolocation.watchPosition(onPosition, onError, {
-			enableHighAccuracy: true,
-			maximumAge: 0,
-			timeout: 10000
-		  });
-		};
-		startGPS();
-		// Relance au clic si le navigateur attend une interaction
-		document.body.addEventListener('click', startGPS, { once: true });
-	  } else {
-    document.getElementById('gps-status-text').textContent = 'GPS non supporté';
-    document.getElementById('dot').className = 'dot error';
-  }
-
-  function recordPoint() {
-    if (!pos) return;
-    const nameInput = document.getElementById('point-name');
-    const name = nameInput.value.trim() || ('PT' + String(ptCounter).padStart(3, '0'));
-    const lat = pos.coords.latitude;
-    const lon = pos.coords.longitude;
-    const alt = pos.coords.altitude;
-    const acc = pos.coords.accuracy;
-    const ts = new Date().toISOString();
-
-    points.push({ num: ptCounter, name, lat, lon, alt, acc, ts });
-    ptCounter++;
+    points.push(pt);
+    if (!isNaN(name)) ptCounter = parseInt(name) + 1; else ptCounter++;
+    
+    // Nettoyage et maintien du focus / clavier ouvert
     nameInput.value = '';
-    renderPoints();
-
-    document.getElementById('btn-csv').disabled = false;
-    const btn = document.getElementById('btn-rec');
-    btn.textContent = '✓ Enregistré';
-    btn.className = 'btn-record ok';
+    render();
+    
+    // Petite pause pour laisser le focus se remettre et le clavier rester levé
     setTimeout(() => {
-      btn.textContent = '+ Enregistrer';
-      btn.className = 'btn-record';
-    }, 1200);
+      nameInput.focus();
+    }, 50);
   }
 
-  function deletePoint(num) {
-    points = points.filter(p => p.num !== num);
-    renderPoints();
-    if (points.length === 0) document.getElementById('btn-csv').disabled = true;
-  }
-
-  function renderPoints() {
-    const list = document.getElementById('points-list');
-    const n = points.length;
-    document.getElementById('pts-count').textContent =
-      n + ' point' + (n > 1 ? 's' : '') + ' enregistré' + (n > 1 ? 's' : '');
-    list.innerHTML = '';
-    if (n === 0) {
-      list.innerHTML = '<div class="empty">Aucun point enregistré</div>';
+  // Affichage de la liste
+  function render() {
+    const cont = document.getElementById('list');
+    document.getElementById('count').textContent = `${points.length} point(s) enregistré(s)`;
+    document.getElementById('btn-csv').disabled = points.length === 0;
+    
+    if (points.length === 0) {
+      cont.innerHTML = '<div class="empty-msg">Prêt pour le levé.</div>';
       return;
     }
-    [...points].reverse().forEach(pt => {
-      const altStr = pt.alt !== null && pt.alt !== undefined
-        ? pt.alt.toFixed(1) + ' m' : 'alt N/D';
-      const div = document.createElement('div');
-      div.className = 'point-item';
-      div.innerHTML =
-        '<span class="point-num">#' + pt.num + '</span>' +
-        '<div>' +
-          '<div class="point-name">' + pt.name + '</div>' +
-          '<div class="point-coords">' +
-            pt.lat.toFixed(6) + ', ' + pt.lon.toFixed(6) +
-            ' — ' + altStr +
-          '</div>' +
-        '</div>' +
-        '<div style="display:flex;align-items:center;gap:6px">' +
-          '<span class="point-acc ' + accClass(pt.acc) + '">±' + pt.acc.toFixed(1) + 'm</span>' +
-          '<button class="btn-delete" onclick="deletePoint(' + pt.num + ')">×</button>' +
-        '</div>';
-      list.appendChild(div);
+
+    cont.innerHTML = '';
+    [...points].reverse().forEach(p => {
+      const d = document.createElement('div');
+      d.className = 'point-item';
+      d.innerHTML = `
+        <div>
+          <div style="font-weight:900; font-size:15px; color:#4ade80;">${p.name}</div>
+          <div style="font-size:11px; font-family:monospace; color:#888; margin-top:2px;">
+            E:${p.x.toFixed(2)} N:${p.y.toFixed(2)} Z:${p.z ? p.z.toFixed(2) : '—'}
+          </div>
+        </div>
+        <button class="btn-delete" onclick="deletePt(${p.id})">×</button>
+      `;
+      cont.appendChild(d);
     });
   }
 
-  function exportCSV() {
-    const BOM = '\uFEFF';
-    const header = 'num,nom,latitude,longitude,altitude_m,precision_m,horodatage\n';
-    const rows = points.map(p =>
-      p.num + ',"' + p.name + '",' +
-      p.lat.toFixed(8) + ',' +
-      p.lon.toFixed(8) + ',' +
-      (p.alt !== null && p.alt !== undefined ? p.alt.toFixed(3) : '') + ',' +
-      p.acc.toFixed(3) + ',' +
-      p.ts
-    ).join('\n');
-    const blob = new Blob([BOM + header + rows], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'leve_topo_' + new Date().toISOString().slice(0, 10) + '.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+  function deletePt(id) {
+    points = points.filter(p => p.id !== id);
+    render();
   }
+
+  // Exportation Standard Topo
+  function exportCSV() {
+    const head = "Nom,X_L93,Y_L93,Z_Ellipsoide,Prec_H,Prec_V,Horodatage\n";
+    const body = points.map(p => 
+      `${p.name},${p.x.toFixed(3)},${p.y.toFixed(3)},${p.z ? p.z.toFixed(3) : ''},${p.accH.toFixed(2)},${p.accV.toFixed(2)},${p.ts}`
+    ).join('\n');
+    
+    const blob = new Blob(["\uFEFF" + head + body], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `Leve_L93_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  // Gestion du GPS
+  if (navigator.geolocation) {
+    const options = {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 10000
+    };
+
+    const startGPS = () => {
+      navigator.geolocation.watchPosition(updateDisplay, (e) => {
+        document.getElementById('status').textContent = "Erreur : " + e.message;
+        document.getElementById('dot').className = 'dot';
+      }, options);
+    };
+
+    startGPS();
+    // Sécurité pour forcer l'activation au premier clic écran
+    document.body.addEventListener('click', startGPS, { once: true });
+  } else {
+    document.getElementById('status').textContent = "Le GPS n'est pas supporté par ce mobile.";
+  }
+
+  // Gestion de la touche "Entrée" du clavier pour valider
+  document.getElementById('pt-name').addEventListener('keypress', function (e) {
+    if (e.key === 'Enter') {
+      record();
+    }
+  });
 </script>
 </body>
 </html>
