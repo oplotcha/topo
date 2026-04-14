@@ -193,8 +193,10 @@
     const hEllip = lastPos.coords.altitude; 
   
     try {
-      // Utilisation de l'API avec des paramètres de secours
-      const response = await fetch(`https://data.geopf.fr/altimetrie/1.0/calcul/altimetrique.json?lon=${lon}&lat=${lat}&resource=api-rest&indent=false`, {
+      // Utilisation du proxy pour contourner le blocage CORS du navigateur
+      const apiUrl = `https://data.geopf.fr/altimetrie/1.0/calcul/altimetrique.json?lon=${lon}&lat=${lat}&resource=api-rest&indent=false`;
+      
+      const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(apiUrl)}`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' }
       });
