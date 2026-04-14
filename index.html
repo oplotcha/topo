@@ -127,10 +127,6 @@
       <button class="btn" id="btn-rec" disabled onclick="recordPoint()" style="width:100%">OK</button>
     </div>
 
-    <!-- Export -->
-    <button class="btn" style="width:100%; margin-top:10px; background:#333; color:#fff" onclick="exportCSV()">
-      Exporter CSV
-    </button>
 
     <!-- Liste des derniers points -->
     <div id="pt-list" style="margin-top:20px; display:flex; flex-direction:column; gap:6px"></div>
@@ -153,12 +149,15 @@
       e.target.result.reverse().forEach(p => {
         const d = document.createElement('div');
         d.className = 'project-item';
-        d.innerHTML =
+        d.innerHTML = 
           '<div onclick="openProj(\'' + p.name + '\')" style="cursor:pointer; flex:1">' +
             '<b>' + p.name + '</b><br>' +
             '<small style="color:#666">' + p.points.length + ' points</small>' +
           '</div>' +
-          '<button class="btn-small" style="background:#522" onclick="deleteProj(\'' + p.name + '\')">×</button>';
+          '<div style="display:flex; gap:8px;">' +
+            '<button class="btn-small" style="background:#22c55e; color:#000" onclick="exportSpecificCSV(\'' + p.name + '\')">Export</button>' +
+            '<button class="btn-small" style="background:#522" onclick="deleteProj(\'' + p.name + '\')">×</button>' +
+          '</div>';
         list.appendChild(d);
       });
     };
