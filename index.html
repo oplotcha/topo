@@ -3,89 +3,96 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Topo Pro</title>
+  <title>Topo Pro - High Visibility</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
   <style>
+    /* Thème Clair - Optimisé Plein Soleil */
     * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
-    body { font-family: 'Segoe UI', Roboto, sans-serif; background: #0a0a0a; color: #e5e5e5; min-height: 100vh; }
+    body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #FFFFFF; color: #000000; min-height: 100vh; }
     .screen { display: none; padding: 15px; max-width: 500px; margin: 0 auto; }
     .active { display: block; }
 
-    /* Accueil */
-    h2 { font-size: 11px; color: #666; text-transform: uppercase; margin: 20px 0 10px; letter-spacing: 1px; }
-    .card { background: #1a1a1a; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 20px; }
+    h2 { font-size: 11px; color: #555; text-transform: uppercase; margin: 20px 0 10px; letter-spacing: 1px; font-weight: 800; }
+    
+    /* Cartes et Listes */
+    .card { background: #f0f4f8; padding: 15px; border-radius: 12px; border: 1px solid #d1d9e0; margin-bottom: 20px; }
     .project-item {
-      background: #161616; border: 1px solid #222; border-radius: 10px;
+      background: #FFFFFF; border: 2px solid #e1e8ed; border-radius: 10px;
       padding: 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;
     }
 
-    /* Dashboard */
-    .dashboard { background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
-
+    /* Dashboard Coordonnées */
+    .dashboard { background: #f8fafc; border: 2px solid #000; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
     .coords-line {
-      font-size: 11px; font-family: monospace; color: #888;
+      font-size: 13px; font-family: monospace; color: #000;
       letter-spacing: 0.03em; margin-bottom: 12px;
       display: flex; justify-content: space-between; flex-wrap: nowrap; gap: 4px;
     }
-    .coords-line span { color: #ddd; font-weight: bold; }
+    .coords-line span { color: #000; font-weight: 900; }
 
     .prec-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; text-align: center; }
-    .prec-val { font-size: 14px; font-weight: 900; font-family: monospace; }
-    .prec-val.good { color: #4ade80; }
-    .prec-val.mid  { color: #fbbf24; }
-    .prec-val.bad  { color: #f87171; }
-    .label { font-size: 9px; color: #888; text-transform: uppercase; margin-top: 2px; }
-    .rtk-fix   { color: #4ade80; }
-    .rtk-float { color: #fbbf24; }
+    .prec-val { font-size: 14px; font-weight: 900; font-family: monospace; padding: 4px; border-radius: 4px; }
+    
+    /* Couleurs de précision sur fond clair */
+    .prec-val.good { background: #dcfce7; color: #166534; } /* Vert doux */
+    .prec-val.mid  { background: #fef9c3; color: #854d0e; } /* Jaune */
+    .prec-val.bad  { background: #fee2e2; color: #991b1b; } /* Rouge */
+    
+    .label { font-size: 10px; color: #444; text-transform: uppercase; margin-top: 4px; font-weight: bold; }
+    
+    .rtk-fix   { color: #1d4ed8; } /* Bleu */
+    .rtk-float { color: #854d0e; }
     .rtk-none  { color: #666; }
 
-    /* Formulaire */
-    input {
-      width: 100%; background: #000; border: 2px solid #333;
-      border-radius: 10px; padding: 10px; color: #fff; font-size: 16px;
+    /* Formulaire Saisie */
+    input { 
+      width: 100%; background: #FFFFFF; border: 2px solid #000; 
+      border-radius: 10px; padding: 12px; color: #000; font-size: 18px; font-weight: bold;
     }
-    input:focus { outline: none; border-color: #555; }
+    input:focus { outline: none; border-color: #1d4ed8; background: #eff6ff; }
 
-    .btn {
-      background: #4ade80; color: #000; border: none; border-radius: 10px;
-      padding: 15px; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 15px;
+    /* Boutons */
+    .btn { 
+      background: #1d4ed8; color: #FFFFFF; border: none; border-radius: 12px; 
+      padding: 18px; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 16px; 
+      box-shadow: 0 4px 0 #1e3a8a;
     }
-    .btn-small { padding: 6px 12px; font-size: 11px; background: #333; color: #fff; border-radius: 8px; border: none; cursor: pointer; }
+    .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #1e3a8a; }
+    .btn:disabled { background: #cbd5e1 !important; color: #64748b !important; box-shadow: none !important; cursor: not-allowed; }
+    .btn.locked { background: #ef4444 !important; color: #FFFFFF !important; box-shadow: 0 4px 0 #991b1b; }
+    
+    .btn-small { padding: 8px 14px; font-size: 11px; border-radius: 8px; border: none; cursor: pointer; font-weight: 800; text-transform: uppercase; }
 
-    .record-section { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-    .fields-row { display: flex; gap: 8px; align-items: flex-end; }
+    .record-section { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+    .fields-row { display: flex; gap: 10px; align-items: flex-end; }
 
     /* Liste points */
-    .pt-row {
-      background: #161616; padding: 10px 12px; border-radius: 8px;
-      font-size: 12px; font-family: monospace;
-      border-left: 3px solid #4ade80;
+    .pt-row { 
+      background: #f1f5f9; padding: 12px; border-radius: 8px; 
+      font-size: 13px; font-family: monospace; color: #000;
+      border-left: 5px solid #1d4ed8; margin-bottom: 4px;
+      border-bottom: 1px solid #cbd5e1;
     }
   </style>
 </head>
 <body>
 
-  <!-- Écran accueil -->
   <div id="screen-start" class="screen active">
     <h2>Nouveau projet</h2>
     <div class="card">
-      <input type="text" id="new-name" placeholder="Nom du chantier..." style="margin-bottom:10px">
+      <input type="text" id="new-name" placeholder="NOM DU CHANTIER..." style="margin-bottom:12px">
       <button class="btn" style="width:100%" onclick="addProject()">Créer projet</button>
     </div>
-
     <h2>Chantiers en mémoire</h2>
     <div id="project-list"></div>
   </div>
 
-  <!-- Écran levé -->
   <div id="screen-topo" class="screen">
-
     <div style="display:flex; justify-content:space-between; margin-bottom:15px; align-items:center">
-      <b id="cur-name" style="color:#4ade80; font-size:15px"></b>
-      <button class="btn-small" onclick="location.reload()">Menu principal</button>
+      <b id="cur-name" style="color:#1d4ed8; font-size:16px"></b>
+      <button class="btn-small" style="background:#000; color:#fff" onclick="location.reload()">Menu</button>
     </div>
 
-    <!-- Coordonnées + précision -->
     <div class="dashboard">
       <div class="coords-line">
         <span>E=</span><span id="x-v">—</span>
@@ -95,49 +102,45 @@
       <div class="prec-grid">
         <div>
           <div class="prec-val bad" id="prec-plani">—</div>
-          <div class="label">Préc. plani</div>
+          <div class="label">Plani</div>
         </div>
         <div>
           <div class="prec-val bad" id="prec-alti">—</div>
-          <div class="label">Préc. alti</div>
+          <div class="label">Alti</div>
         </div>
         <div>
           <div class="prec-val rtk-none" id="rtk-status">—</div>
-          <div class="label">RTK</div>
+          <div class="label">Statut</div>
         </div>
       </div>
     </div>
 
-    <!-- Champs de saisie -->
     <div class="record-section">
       <div class="fields-row">
-        <div style="flex: 0 0 70px;">
-          <div class="label" style="margin-bottom:4px">N°</div>
-          <input type="number" id="pt-num" style="text-align:center; padding:10px 6px; font-size:18px; font-weight:bold;">
+        <div style="flex: 0 0 80px;">
+          <div class="label" style="margin-bottom:4px">N° Point</div>
+          <input type="number" id="pt-num" style="text-align:center;">
         </div>
         <div style="flex: 1;">
           <div class="label" style="margin-bottom:4px">Code</div>
-          <input type="text" id="pt-code" placeholder="ex: TA, TN..." autocomplete="off" style="font-size:16px; padding:10px;">
+          <input type="text" id="pt-code" placeholder="TA, TN..." autocomplete="off">
         </div>
-        <div style="flex: 0 0 90px;">
-          <div class="label" style="margin-bottom:4px">Haut. canne</div>
-          <input type="number" id="pt-hc" value="0.000" step="0.001" inputmode="decimal" style="text-align:center; padding:10px 4px; font-size:15px;">
+        <div style="flex: 0 0 100px;">
+          <div class="label" style="margin-bottom:4px">H. Canne</div>
+          <input type="number" id="pt-hc" value="0.000" step="0.001" inputmode="decimal" style="text-align:center;">
         </div>
       </div>
-      <button class="btn" id="btn-rec" disabled onclick="recordPoint()" style="width:100%">OK</button>
+      <button class="btn" id="btn-rec" disabled onclick="recordPoint()" style="width:100%">Initialisation...</button>
     </div>
 
-
-    <!-- Liste des derniers points -->
-    <div id="pt-list" style="margin-top:20px; display:flex; flex-direction:column; gap:6px"></div>
-
+    <div id="pt-list" style="margin-top:20px; display:flex; flex-direction:column; gap:4px"></div>
   </div>
 
 <script>
   const EPSG2154 = "+proj=lcc +lat_1=49 +lat_2=44 +lat_0=46.5 +lon_0=3 +x_0=700000 +y_0=6600000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs";
+  const LIMIT_RTK = 0.04; 
   let db, curProj, lastPos;
 
-  // IndexedDB
   const request = indexedDB.open("TopoDB", 1);
   request.onupgradeneeded = e => e.target.result.createObjectStore("projects", { keyPath: "name" });
   request.onsuccess = e => { db = e.target.result; loadProjects(); };
@@ -149,15 +152,14 @@
       e.target.result.reverse().forEach(p => {
         const d = document.createElement('div');
         d.className = 'project-item';
-        d.innerHTML = 
-          '<div onclick="openProj(\'' + p.name + '\')" style="cursor:pointer; flex:1">' +
-            '<b>' + p.name + '</b><br>' +
-            '<small style="color:#666">' + p.points.length + ' points</small>' +
-          '</div>' +
-          '<div style="display:flex; gap:8px;">' +
-            '<button class="btn-small" style="background:#22c55e; color:#000" onclick="exportSpecificCSV(\'' + p.name + '\')">Export</button>' +
-            '<button class="btn-small" style="background:#522" onclick="deleteProj(\'' + p.name + '\')">×</button>' +
-          '</div>';
+        d.innerHTML = `
+          <div onclick="openProj('${p.name}')" style="cursor:pointer; flex:1">
+            <b style="font-size:16px">${p.name}</b><br><small style="color:#666">${p.points.length} points enregistrés</small>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn-small" style="background:#1d4ed8; color:#fff" onclick="exportSpecificCSV('${p.name}')">Export</button>
+            <button class="btn-small" style="background:#fee2e2; color:#991b1b" onclick="deleteProj('${p.name}')">×</button>
+          </div>`;
         list.appendChild(d);
       });
     };
@@ -179,10 +181,11 @@
       document.getElementById('cur-name').textContent = name;
       document.getElementById('screen-start').classList.remove('active');
       document.getElementById('screen-topo').classList.add('active');
-      document.getElementById('pt-num').value = curProj.points.length + 1;
+      const lastNum = curProj.points.length > 0 ? Math.max(...curProj.points.map(p => parseInt(p.n) || 0)) : 0;
+      document.getElementById('pt-num').value = lastNum + 1;
       renderPoints();
       initGPS();
-      setTimeout(() => document.getElementById('pt-code').focus(), 100);
+      setTimeout(() => document.getElementById('pt-code').focus(), 150);
     };
   }
 
@@ -190,57 +193,60 @@
     navigator.geolocation.watchPosition(p => {
       lastPos = p;
       const l93 = proj4("WGS84", EPSG2154, [p.coords.longitude, p.coords.latitude]);
-
       document.getElementById('x-v').textContent = l93[0].toFixed(2);
       document.getElementById('y-v').textContent = l93[1].toFixed(2);
       document.getElementById('z-v').textContent = p.coords.altitude !== null ? p.coords.altitude.toFixed(2) : 'N/D';
-      document.getElementById('btn-rec').disabled = false;
 
-      // Précision planimétrique
       const hAcc = p.coords.accuracy;
+      const vAcc = p.coords.altitudeAccuracy;
+      
       const pEl = document.getElementById('prec-plani');
       pEl.textContent = hAcc.toFixed(2) + ' m';
-      pEl.className = 'prec-val ' + (hAcc < 0.03 ? 'good' : hAcc < 0.30 ? 'mid' : 'bad');
+      pEl.className = 'prec-val ' + (hAcc < LIMIT_RTK ? 'good' : hAcc < 0.30 ? 'mid' : 'bad');
 
-      // Précision altimétrique
-      const vAcc = p.coords.altitudeAccuracy;
       const aEl = document.getElementById('prec-alti');
-      if (vAcc !== null && vAcc !== undefined) {
+      if (vAcc) {
         aEl.textContent = vAcc.toFixed(2) + ' m';
-        aEl.className = 'prec-val ' + (vAcc < 0.10 ? 'good' : vAcc < 2 ? 'mid' : 'bad');
-      } else {
-        aEl.textContent = 'N/D';
-        aEl.className = 'prec-val rtk-none';
+        aEl.className = 'prec-val ' + (vAcc < 0.08 ? 'good' : vAcc < 0.5 ? 'mid' : 'bad');
       }
 
-      // Statut RTK déduit de la précision (Trimble via TMM)
       const rEl = document.getElementById('rtk-status');
-      if (hAcc < 0.03)      { rEl.textContent = 'FIXE';  rEl.className = 'prec-val rtk-fix'; }
-      else if (hAcc < 0.30) { rEl.textContent = 'FLOAT'; rEl.className = 'prec-val rtk-float'; }
-      else                  { rEl.textContent = 'N/A';   rEl.className = 'prec-val rtk-none'; }
+      const btnRec = document.getElementById('btn-rec');
 
-    }, err => {
-      const msgs = { 1: 'Accès GPS refusé', 2: 'GPS indisponible', 3: 'Délai dépassé' };
-      console.warn(msgs[err.code] || 'Erreur GPS');
-    }, { enableHighAccuracy: true });
+      if (hAcc < LIMIT_RTK) {
+        rEl.textContent = 'FIXE';
+        rEl.className = 'prec-val rtk-fix';
+        btnRec.disabled = false;
+        btnRec.classList.remove('locked');
+        btnRec.textContent = "ENREGISTRER POINT";
+      } else {
+        rEl.textContent = hAcc < 0.30 ? 'FLOAT' : 'PRÉC. FAIBLE';
+        rEl.className = hAcc < 0.30 ? 'prec-val rtk-float' : 'prec-val rtk-none';
+        btnRec.disabled = true;
+        btnRec.classList.add('locked');
+        btnRec.textContent = "ATTENTE FIX (" + hAcc.toFixed(2) + "m)";
+      }
+    }, null, { enableHighAccuracy: true });
   }
 
   function recordPoint() {
-    if (!lastPos) return;
-    const numInput  = document.getElementById('pt-num');
+    if (!lastPos || lastPos.coords.accuracy >= LIMIT_RTK) return;
+    const numInput = document.getElementById('pt-num');
     const codeInput = document.getElementById('pt-code');
-    const hcInput   = document.getElementById('pt-hc');
+    const hcInput = document.getElementById('pt-hc');
     const l93 = proj4("WGS84", EPSG2154, [lastPos.coords.longitude, lastPos.coords.latitude]);
-    const hc  = parseFloat(hcInput.value) || 0;
-    const zBrut = lastPos.coords.altitude !== null ? lastPos.coords.altitude : null;
+    const hc = parseFloat(hcInput.value) || 0;
+    const zBrut = lastPos.coords.altitude;
+
     const pt = {
-      n:    numInput.value,
-      code: codeInput.value.trim(),
-      hc:   hc.toFixed(3),
-      x:    l93[0].toFixed(3),
-      y:    l93[1].toFixed(3),
-      z:    zBrut !== null ? (zBrut - hc).toFixed(3) : ''
+      n: numInput.value,
+      code: codeInput.value.trim().toUpperCase(),
+      hc: hc.toFixed(3),
+      x: l93[0].toFixed(3),
+      y: l93[1].toFixed(3),
+      z: zBrut !== null ? (zBrut - hc).toFixed(3) : ''
     };
+
     curProj.points.push(pt);
     db.transaction("projects", "readwrite").objectStore("projects").put(curProj);
     numInput.value = parseInt(numInput.value) + 1;
@@ -251,38 +257,33 @@
   function renderPoints() {
     const list = document.getElementById('pt-list');
     list.innerHTML = '';
-    [...curProj.points].reverse().slice(0, 5).forEach(p => {
+    [...curProj.points].reverse().slice(0, 8).forEach(p => {
       const d = document.createElement('div');
       d.className = 'pt-row';
-      d.innerHTML =
-        '<b>' + p.n + '</b> ' +
-        '<span style="color:#4ade80">' + p.code + '</span> | ' +
-        'X:' + p.x + ' Y:' + p.y + ' Z:' + p.z +
-        ' <span style="color:#555">hc:' + p.hc + '</span>';
+      d.innerHTML = `<b>#${p.n}</b> <span style="color:#1d4ed8; font-weight:bold">${p.code}</span> | E:${p.x} N:${p.y} Z:${p.z}`;
       list.appendChild(d);
     });
   }
 
-  function exportCSV() {
-    const csv = "\uFEFFNum,Code,X,Y,Z,HautCanne\n" +
-      curProj.points.map(p =>
-        p.n + ',' + p.code + ',' + p.x + ',' + p.y + ',' + p.z + ',' + p.hc
-      ).join('\n');
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-    a.download = curProj.name + '_' + new Date().toISOString().slice(0, 10) + '.csv';
-    a.click();
+  function exportSpecificCSV(name) {
+    db.transaction("projects").objectStore("projects").get(name).onsuccess = e => {
+      const p = e.target.result;
+      if (!p || p.points.length === 0) return alert("Aucun point à exporter.");
+      const csv = "\uFEFFNum,Code,X,Y,Z,HautCanne\n" + p.points.map(pt => `${pt.n},${pt.code},${pt.x},${pt.y},${pt.z},${pt.hc}`).join('\n');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+      a.download = p.name + ".csv";
+      a.click();
+    };
   }
 
   function deleteProj(name) {
-    if (confirm('Supprimer le projet "' + name + '" ?')) {
+    if (confirm('Supprimer définitivement le projet "' + name + '" ?')) {
       db.transaction("projects", "readwrite").objectStore("projects").delete(name).onsuccess = loadProjects;
     }
   }
 
-  document.getElementById('pt-code').addEventListener('keypress', e => {
-    if (e.key === 'Enter') recordPoint();
-  });
+  document.getElementById('pt-code').addEventListener('keypress', e => { if (e.key === 'Enter' && !document.getElementById('btn-rec').disabled) recordPoint(); });
 </script>
 </body>
 </html>
