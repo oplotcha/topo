@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Topo Pro - High Visibility</title>
+  <title>Topo Pro Fix</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
@@ -12,65 +12,52 @@
     .active { display: block; }
 
     h2 { font-size: 10px; color: #64748b; text-transform: uppercase; margin: 15px 0 8px; letter-spacing: 1px; font-weight: 800; }
-    
     .card { background: #f8fafc; padding: 12px; border-radius: 10px; border: 1px solid #cbd5e1; margin-bottom: 15px; }
+    
     .project-item {
       background: #FFFFFF; border: 1px solid #cbd5e1; border-radius: 8px;
-      padding: 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;
+      padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;
     }
 
     .dashboard { background: #f1f5f9; border: 1px solid #94a3b8; border-radius: 10px; padding: 12px; margin-bottom: 12px; }
     .coords-line {
       font-size: 13px; font-family: monospace; color: #000;
-      letter-spacing: 0.02em; margin-bottom: 10px;
-      display: flex; justify-content: space-between;
+      display: flex; justify-content: space-between; margin-bottom: 10px;
     }
-    .coords-line span { font-weight: 900; }
+    .coords-line b { color: #2563eb; }
 
     .prec-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; text-align: center; }
-    .prec-val { font-size: 13px; font-weight: 900; font-family: monospace; padding: 3px; border-radius: 4px; }
-    
+    .prec-val { font-size: 12px; font-weight: 900; font-family: monospace; padding: 4px; border-radius: 4px; background: #e2e8f0; }
     .prec-val.good { background: #dcfce7; color: #166534; }
     .prec-val.mid  { background: #fef9c3; color: #854d0e; }
     .prec-val.bad  { background: #fee2e2; color: #991b1b; }
     
     .label { font-size: 9px; color: #64748b; text-transform: uppercase; margin-top: 3px; font-weight: bold; }
-    
-    .rtk-fix   { color: #2563eb; }
-    .rtk-float { color: #d97706; }
 
     input { 
       width: 100%; background: #FFFFFF; border: 1px solid #94a3b8; 
       border-radius: 8px; padding: 10px; color: #000; font-size: 16px;
     }
-    input:focus { outline: none; border-color: #2563eb; background: #f0f7ff; }
 
-    /* Bouton Créer Projet plus fin */
     .btn-create { 
       background: #2563eb; color: #FFFFFF; border: none; border-radius: 8px; 
-      padding: 10px; font-weight: 800; cursor: pointer; text-transform: uppercase; font-size: 13px; 
+      padding: 10px; font-weight: 800; text-transform: uppercase; font-size: 12px; 
       width: 100%; margin-top: 8px;
     }
 
-    /* Bouton OK principal */
     .btn-rec { 
       background: #2563eb; color: #FFFFFF; border: none; border-radius: 10px; 
-      padding: 16px; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 16px; 
-      width: 100%;
+      padding: 16px; font-weight: 900; text-transform: uppercase; font-size: 16px; width: 100%;
     }
-    .btn-rec:disabled { background: #e2e8f0 !important; color: #94a3b8 !important; cursor: not-allowed; }
-    .btn-rec.locked { background: #ef4444 !important; color: #FFFFFF !important; }
+    .btn-rec:disabled { background: #e2e8f0 !important; color: #94a3b8 !important; }
+    .btn-rec.locked { background: #ef4444 !important; }
     
-    .btn-small { padding: 6px 10px; font-size: 10px; border-radius: 6px; border: none; cursor: pointer; font-weight: 800; text-transform: uppercase; }
+    .btn-small { padding: 6px 10px; font-size: 10px; border-radius: 6px; border: none; font-weight: 800; text-transform: uppercase; }
 
-    .record-section { display: flex; flex-direction: column; gap: 8px; margin-top: 5px; }
-    .fields-row { display: flex; gap: 8px; align-items: flex-end; }
-
+    .fields-row { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 10px; }
     .pt-row { 
-      background: #f8fafc; padding: 10px; border-radius: 6px; 
-      font-size: 12px; font-family: monospace; color: #000;
-      border-left: 4px solid #2563eb; margin-bottom: 4px;
-      border: 1px solid #e2e8f0; border-left: 4px solid #2563eb;
+      background: #f8fafc; padding: 10px; border-radius: 6px; font-size: 12px; 
+      font-family: monospace; border: 1px solid #e2e8f0; border-left: 4px solid #2563eb; margin-bottom: 4px;
     }
   </style>
 </head>
@@ -94,36 +81,34 @@
 
     <div class="dashboard">
       <div class="coords-line">
-        <span>E= <span id="x-v">—</span></span>
-        <span>N= <span id="y-v">—</span></span>
-        <span>Z= <span id="z-v">—</span></span>
+        <span><b>E</b> <span id="x-v">0.00</span></span>
+        <span><b>N</b> <span id="y-v">0.00</span></span>
+        <span><b>Z</b> <span id="z-v">0.00</span></span>
       </div>
       <div class="prec-grid">
-        <div><div class="prec-val bad" id="prec-plani">—</div><div class="label">Plani</div></div>
-        <div><div class="prec-val bad" id="prec-alti">—</div><div class="label">Alti</div></div>
-        <div><div class="prec-val rtk-none" id="rtk-status">—</div><div class="label">Statut</div></div>
+        <div><div class="prec-val" id="prec-plani">0.00m</div><div class="label">Plani</div></div>
+        <div><div class="prec-val" id="prec-alti">0.00m</div><div class="label">Alti</div></div>
+        <div><div class="prec-val" id="rtk-status">N/A</div><div class="label">Statut</div></div>
       </div>
     </div>
 
-    <div class="record-section">
-      <div class="fields-row">
-        <div style="flex: 0 0 70px;">
-          <div class="label">N°</div>
-          <input type="number" id="pt-num" style="text-align:center;">
-        </div>
-        <div style="flex: 1;">
-          <div class="label">Code</div>
-          <input type="text" id="pt-code" placeholder="Code..." autocomplete="off" inputmode="decimal">
-        </div>
-        <div style="flex: 0 0 90px;">
-          <div class="label">H. Canne</div>
-          <input type="number" id="pt-hc" value="0.000" step="0.001" inputmode="decimal" style="text-align:center;">
-        </div>
+    <div class="fields-row">
+      <div style="flex: 0 0 70px;">
+        <div class="label">N°</div>
+        <input type="number" id="pt-num">
       </div>
-      <button class="btn-rec" id="btn-rec" disabled onclick="recordPoint()">Initialisation...</button>
+      <div style="flex: 1;">
+        <div class="label">Code</div>
+        <input type="text" id="pt-code" placeholder="Code..." inputmode="decimal">
+      </div>
+      <div style="flex: 0 0 90px;">
+        <div class="label">H. Canne</div>
+        <input type="number" id="pt-hc" value="0.000" step="0.001" inputmode="decimal">
+      </div>
     </div>
+    <button class="btn-rec" id="btn-rec" disabled onclick="recordPoint()">Attente GPS...</button>
 
-    <div id="pt-list" style="margin-top:15px; display:flex; flex-direction:column; gap:4px"></div>
+    <div id="pt-list" style="margin-top:15px;"></div>
   </div>
 
 <script>
@@ -131,12 +116,23 @@
   const LIMIT_RTK = 0.04; 
   let db, curProj, lastPos;
 
+  // Initialisation Database robuste
   const request = indexedDB.open("TopoDB", 1);
-  request.onupgradeneeded = e => e.target.result.createObjectStore("projects", { keyPath: "name" });
-  request.onsuccess = e => { db = e.target.result; loadProjects(); };
+  request.onupgradeneeded = e => {
+    let dbSetup = e.target.result;
+    if (!dbSetup.objectStoreNames.contains("projects")) {
+      dbSetup.createObjectStore("projects", { keyPath: "name" });
+    }
+  };
+  request.onsuccess = e => { 
+    db = e.target.result; 
+    loadProjects(); 
+  };
+  request.onerror = () => alert("Erreur de base de données. Videz votre cache.");
 
   function loadProjects() {
     const list = document.getElementById('project-list');
+    if(!list) return;
     list.innerHTML = '';
     db.transaction("projects").objectStore("projects").getAll().onsuccess = e => {
       e.target.result.reverse().forEach(p => {
@@ -144,7 +140,7 @@
         d.className = 'project-item';
         d.innerHTML = `
           <div onclick="openProj('${p.name}')" style="cursor:pointer; flex:1">
-            <b style="font-size:15px">${p.name}</b><br><small style="color:#64748b">${p.points.length} pts</small>
+            <b>${p.name}</b><br><small style="color:#64748b">${p.points.length} pts</small>
           </div>
           <div style="display:flex; gap:6px;">
             <button class="btn-small" style="background:#2563eb; color:#fff" onclick="exportSpecificCSV('${p.name}')">Export</button>
@@ -156,11 +152,13 @@
   }
 
   function addProject() {
-    const name = document.getElementById('new-name').value.trim();
+    const nameInput = document.getElementById('new-name');
+    const name = nameInput.value.trim();
     if (!name) return;
-    const proj = { name, points: [] };
-    db.transaction("projects", "readwrite").objectStore("projects").add(proj).onsuccess = () => {
-      document.getElementById('new-name').value = '';
+    const proj = { name: name, points: [] };
+    const tx = db.transaction("projects", "readwrite");
+    tx.objectStore("projects").add(proj).onsuccess = () => {
+      nameInput.value = '';
       openProj(name);
     };
   }
@@ -171,8 +169,10 @@
       document.getElementById('cur-name').textContent = name;
       document.getElementById('screen-start').classList.remove('active');
       document.getElementById('screen-topo').classList.add('active');
+      
       const lastNum = curProj.points.length > 0 ? Math.max(...curProj.points.map(p => parseInt(p.n) || 0)) : 0;
       document.getElementById('pt-num').value = lastNum + 1;
+      
       renderPoints();
       initGPS();
       setTimeout(() => document.getElementById('pt-code').focus(), 150);
@@ -183,9 +183,11 @@
     navigator.geolocation.watchPosition(p => {
       lastPos = p;
       const l93 = proj4("WGS84", EPSG2154, [p.coords.longitude, p.coords.latitude]);
+      
+      // Mise à jour interface
       document.getElementById('x-v').textContent = l93[0].toFixed(2);
       document.getElementById('y-v').textContent = l93[1].toFixed(2);
-      document.getElementById('z-v').textContent = p.coords.altitude !== null ? p.coords.altitude.toFixed(2) : 'N/D';
+      document.getElementById('z-v').textContent = p.coords.altitude ? p.coords.altitude.toFixed(2) : '0.00';
 
       const hAcc = p.coords.accuracy;
       const vAcc = p.coords.altitudeAccuracy;
@@ -205,13 +207,13 @@
 
       if (hAcc < LIMIT_RTK) {
         rEl.textContent = 'FIXE';
-        rEl.className = 'prec-val rtk-fix';
+        rEl.className = 'prec-val good';
         btnRec.disabled = false;
         btnRec.classList.remove('locked');
         btnRec.textContent = "ENREGISTRER POINT";
       } else {
         rEl.textContent = hAcc < 0.30 ? 'FLOAT' : 'PRÉC.';
-        rEl.className = hAcc < 0.30 ? 'prec-val rtk-float' : 'prec-val rtk-none';
+        rEl.className = hAcc < 0.30 ? 'prec-val mid' : 'prec-val bad';
         btnRec.disabled = true;
         btnRec.classList.add('locked');
         btnRec.textContent = "ATTENTE FIX (" + hAcc.toFixed(2) + "m)";
@@ -221,36 +223,38 @@
 
   function recordPoint() {
     if (!lastPos || lastPos.coords.accuracy >= LIMIT_RTK) return;
-    const numInput = document.getElementById('pt-num');
-    const codeInput = document.getElementById('pt-code');
-    const hcInput = document.getElementById('pt-hc');
+    
+    const num = document.getElementById('pt-num').value;
+    const code = document.getElementById('pt-code').value.trim().toUpperCase();
+    const hc = parseFloat(document.getElementById('pt-hc').value) || 0;
+    
     const l93 = proj4("WGS84", EPSG2154, [lastPos.coords.longitude, lastPos.coords.latitude]);
-    const hc = parseFloat(hcInput.value) || 0;
-    const zBrut = lastPos.coords.altitude;
+    const zFinal = lastPos.coords.altitude ? (lastPos.coords.altitude - hc).toFixed(3) : '0.000';
 
     const pt = {
-      n: numInput.value,
-      code: codeInput.value.trim().toUpperCase(),
+      n: num,
+      code: code || "PT",
       hc: hc.toFixed(3),
       x: l93[0].toFixed(3),
       y: l93[1].toFixed(3),
-      z: zBrut !== null ? (zBrut - hc).toFixed(3) : ''
+      z: zFinal
     };
 
     curProj.points.push(pt);
-    db.transaction("projects", "readwrite").objectStore("projects").put(curProj);
-    numInput.value = parseInt(numInput.value) + 1;
-    renderPoints();
-    setTimeout(() => codeInput.focus(), 50);
+    db.transaction("projects", "readwrite").objectStore("projects").put(curProj).onsuccess = () => {
+      document.getElementById('pt-num').value = parseInt(num) + 1;
+      renderPoints();
+      setTimeout(() => document.getElementById('pt-code').focus(), 50);
+    };
   }
 
   function renderPoints() {
     const list = document.getElementById('pt-list');
     list.innerHTML = '';
-    [...curProj.points].reverse().slice(0, 8).forEach(p => {
+    [...curProj.points].reverse().slice(0, 5).forEach(p => {
       const d = document.createElement('div');
       d.className = 'pt-row';
-      d.innerHTML = `<b>#${p.n}</b> <span style="color:#2563eb">${p.code}</span> | E:${p.x} N:${p.y} Z:${p.z}`;
+      d.innerHTML = `<b>#${p.n}</b> [${p.code}] E:${p.x} N:${p.y} Z:${p.z}`;
       list.appendChild(d);
     });
   }
@@ -258,6 +262,23 @@
   function exportSpecificCSV(name) {
     db.transaction("projects").objectStore("projects").get(name).onsuccess = e => {
       const p = e.target.result;
-      if (!p || p.points.length === 0) return alert("Aucun point.");
       const csv = "\uFEFFNum,Code,X,Y,Z,HautCanne\n" + p.points.map(pt => `${pt.n},${pt.code},${pt.x},${pt.y},${pt.z},${pt.hc}`).join('\n');
-      const a = document.createElement('a
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+      a.download = p.name + ".csv";
+      a.click();
+    };
+  }
+
+  function deleteProj(name) {
+    if (confirm('Supprimer ' + name + ' ?')) {
+      db.transaction("projects", "readwrite").objectStore("projects").delete(name).onsuccess = loadProjects;
+    }
+  }
+
+  document.getElementById('pt-code').addEventListener('keypress', e => { 
+    if (e.key === 'Enter' && !document.getElementById('btn-rec').disabled) recordPoint(); 
+  });
+</script>
+</body>
+</html>
