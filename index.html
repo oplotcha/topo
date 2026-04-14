@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Topo Pro Fix</title>
+  <title>Topo Pro - RAF20</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
@@ -36,8 +36,9 @@
 
     input { 
       width: 100%; background: #FFFFFF; border: 1px solid #94a3b8; 
-      border-radius: 8px; padding: 10px; color: #000; font-size: 16px;
+      border-radius: 8px; padding: 10px; color: #000; font-size: 16px; font-weight: bold;
     }
+    input:focus { border-color: #2563eb; outline: none; background: #f0f7ff; }
 
     .btn-create { 
       background: #2563eb; color: #FFFFFF; border: none; border-radius: 8px; 
@@ -51,8 +52,9 @@
     }
     .btn-rec:disabled { background: #e2e8f0 !important; color: #94a3b8 !important; }
     .btn-rec.locked { background: #ef4444 !important; }
+    .btn-rec.loading { background: #64748b !important; cursor: wait; }
     
-    .btn-small { padding: 6px 10px; font-size: 10px; border-radius: 6px; border: none; font-weight: 800; text-transform: uppercase; }
+    .btn-small { padding: 6px 10px; font-size: 10px; border-radius: 6px; border: none; font-weight: 800; text-transform: uppercase; cursor: pointer; }
 
     .fields-row { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 10px; }
     .pt-row { 
@@ -103,7 +105,7 @@
       </div>
       <div style="flex: 0 0 90px;">
         <div class="label">H. Canne</div>
-        <input type="number" id="pt-hc" value="0.000" step="0.001" inputmode="decimal">
+        <input type="number" id="pt-hc" value="0.000" step="0.001" inputmode="decimal" style="text-align:center;">
       </div>
     </div>
     <button class="btn-rec" id="btn-rec" disabled onclick="recordPoint()">Attente GPS...</button>
@@ -116,7 +118,7 @@
   const LIMIT_RTK = 0.04; 
   let db, curProj, lastPos;
 
-  // Initialisation Database robuste
+  // Base de données
   const request = indexedDB.open("TopoDB", 1);
   request.onupgradeneeded = e => {
     let dbSetup = e.target.result;
@@ -124,11 +126,7 @@
       dbSetup.createObjectStore("projects", { keyPath: "name" });
     }
   };
-  request.onsuccess = e => { 
-    db = e.target.result; 
-    loadProjects(); 
-  };
-  request.onerror = () => alert("Erreur de base de données. Videz votre cache.");
+  request.onsuccess = e => { db = e.target.result; loadProjects(); };
 
   function loadProjects() {
     const list = document.getElementById('project-list');
@@ -156,8 +154,7 @@
     const name = nameInput.value.trim();
     if (!name) return;
     const proj = { name: name, points: [] };
-    const tx = db.transaction("projects", "readwrite");
-    tx.objectStore("projects").add(proj).onsuccess = () => {
+    db.transaction("projects", "readwrite").objectStore("projects").add(proj).onsuccess = () => {
       nameInput.value = '';
       openProj(name);
     };
@@ -169,10 +166,8 @@
       document.getElementById('cur-name').textContent = name;
       document.getElementById('screen-start').classList.remove('active');
       document.getElementById('screen-topo').classList.add('active');
-      
       const lastNum = curProj.points.length > 0 ? Math.max(...curProj.points.map(p => parseInt(p.n) || 0)) : 0;
       document.getElementById('pt-num').value = lastNum + 1;
-      
       renderPoints();
       initGPS();
       setTimeout(() => document.getElementById('pt-code').focus(), 150);
@@ -182,24 +177,27 @@
   function initGPS() {
     navigator.geolocation.watchPosition(p => {
       lastPos = p;
-      const l93 = proj4("WGS84", EPSG2154, [p.coords.longitude, p.coords.latitude]);
+      const c = p.coords;
+      const l93 = proj4("WGS84", EPSG2154, [c.longitude, c.latitude]);
       
-      // Mise à jour interface
       document.getElementById('x-v').textContent = l93[0].toFixed(2);
       document.getElementById('y-v').textContent = l93[1].toFixed(2);
-      document.getElementById('z-v').textContent = p.coords.altitude ? p.coords.altitude.toFixed(2) : '0.00';
+      document.getElementById('z-v').textContent = c.altitude ? c.altitude.toFixed(2) : '0.00';
 
-      const hAcc = p.coords.accuracy;
-      const vAcc = p.coords.altitudeAccuracy;
-      
+      // Précision Plani
+      const hAcc = c.accuracy;
       const pEl = document.getElementById('prec-plani');
       pEl.textContent = hAcc.toFixed(2) + 'm';
       pEl.className = 'prec-val ' + (hAcc < LIMIT_RTK ? 'good' : hAcc < 0.30 ? 'mid' : 'bad');
 
+      // Précision Alti (Trimble)
+      const vAcc = c.altitudeAccuracy;
       const aEl = document.getElementById('prec-alti');
-      if (vAcc) {
+      if (vAcc !== null && vAcc !== undefined) {
         aEl.textContent = vAcc.toFixed(2) + 'm';
         aEl.className = 'prec-val ' + (vAcc < 0.08 ? 'good' : vAcc < 0.5 ? 'mid' : 'bad');
+      } else {
+        aEl.textContent = "N/D";
       }
 
       const rEl = document.getElementById('rtk-status');
@@ -218,32 +216,60 @@
         btnRec.classList.add('locked');
         btnRec.textContent = "ATTENTE FIX (" + hAcc.toFixed(2) + "m)";
       }
-    }, null, { enableHighAccuracy: true });
+    }, null, { enableHighAccuracy: true, maximumAge: 0 });
   }
 
-  function recordPoint() {
+  async function getIGN69(lon, lat) {
+    try {
+      const url = `https://data.geopf.fr/altimetrie/1.0/calcul/altimetrique.json?lon=${lon}&lat=${lat}&resource=api-rest&indent=false&measures=false`;
+      const res = await fetch(url);
+      const data = await res.json();
+      return (data.elevations && data.elevations.length > 0) ? data.elevations[0].z : null;
+    } catch (e) { return null; }
+  }
+
+  async function recordPoint() {
     if (!lastPos || lastPos.coords.accuracy >= LIMIT_RTK) return;
     
+    const btn = document.getElementById('btn-rec');
+    btn.disabled = true;
+    btn.classList.add('loading');
+    btn.textContent = "CALCUL RAF20...";
+
     const num = document.getElementById('pt-num').value;
-    const code = document.getElementById('pt-code').value.trim().toUpperCase();
+    const code = document.getElementById('pt-code').value.trim().toUpperCase() || "PT";
     const hc = parseFloat(document.getElementById('pt-hc').value) || 0;
     
-    const l93 = proj4("WGS84", EPSG2154, [lastPos.coords.longitude, lastPos.coords.latitude]);
-    const zFinal = lastPos.coords.altitude ? (lastPos.coords.altitude - hc).toFixed(3) : '0.000';
+    const lon = lastPos.coords.longitude;
+    const lat = lastPos.coords.latitude;
+    const l93 = proj4("WGS84", EPSG2154, [lon, lat]);
+
+    // Altimétrie RAF20
+    let zVal = await getIGN69(lon, lat);
+    let note = "IGN69";
+
+    if (zVal === null) {
+      zVal = lastPos.coords.altitude || 0;
+      note = "ELLIP (Erreur Réseau)";
+    }
 
     const pt = {
       n: num,
-      code: code || "PT",
+      code: code,
       hc: hc.toFixed(3),
       x: l93[0].toFixed(3),
       y: l93[1].toFixed(3),
-      z: zFinal
+      z: (zVal - hc).toFixed(3),
+      note: note
     };
 
     curProj.points.push(pt);
     db.transaction("projects", "readwrite").objectStore("projects").put(curProj).onsuccess = () => {
       document.getElementById('pt-num').value = parseInt(num) + 1;
       renderPoints();
+      btn.disabled = false;
+      btn.classList.remove('loading');
+      btn.textContent = "ENREGISTRER POINT";
       setTimeout(() => document.getElementById('pt-code').focus(), 50);
     };
   }
@@ -254,7 +280,7 @@
     [...curProj.points].reverse().slice(0, 5).forEach(p => {
       const d = document.createElement('div');
       d.className = 'pt-row';
-      d.innerHTML = `<b>#${p.n}</b> [${p.code}] E:${p.x} N:${p.y} Z:${p.z}`;
+      d.innerHTML = `<b>#${p.n}</b> [${p.code}] E:${p.x} N:${p.y} Z:${p.z} <small>(${p.note})</small>`;
       list.appendChild(d);
     });
   }
@@ -262,7 +288,7 @@
   function exportSpecificCSV(name) {
     db.transaction("projects").objectStore("projects").get(name).onsuccess = e => {
       const p = e.target.result;
-      const csv = "\uFEFFNum,Code,X,Y,Z,HautCanne\n" + p.points.map(pt => `${pt.n},${pt.code},${pt.x},${pt.y},${pt.z},${pt.hc}`).join('\n');
+      const csv = "\uFEFFNum,Code,X,Y,Z,HautCanne,Note\n" + p.points.map(pt => `${pt.n},${pt.code},${pt.x},${pt.y},${pt.z},${pt.hc},${pt.note}`).join('\n');
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
       a.download = p.name + ".csv";
@@ -271,7 +297,7 @@
   }
 
   function deleteProj(name) {
-    if (confirm('Supprimer ' + name + ' ?')) {
+    if (confirm('Supprimer définitivement le projet ' + name + ' ?')) {
       db.transaction("projects", "readwrite").objectStore("projects").delete(name).onsuccess = loadProjects;
     }
   }
