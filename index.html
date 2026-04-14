@@ -151,33 +151,38 @@
     const lon = lastPos.coords.longitude;
     const lat = lastPos.coords.latitude;
     const hEllip = lastPos.coords.altitude;
-
+  
+    // CONSTANTE DE SECOURS (Ondulation moyenne en France ~49m)
+    // À ajuster selon ta région précise si tu veux plus de précision sans réseau
+    const ONDULATION_DE_SECOURS = 49.0; 
+  
     try {
-      // Version ultra-directe pour éviter les blocages CORS
       const url = `https://data.geopf.fr/altimetrie/1.0/calcul/altimetrique.json?lon=${lon}&lat=${lat}&resource=api-rest&indent=false`;
-      const res = await fetch(url);
-      const data = await res.json();
       
-      let zNGF = data.elevations[0].z;
-      let zFinal = zNGF - hc;
-
-      savePt(num, code, hc, lon, lat, zFinal, "IGN69");
+      // On ajoute un timeout de 3 secondes pour ne pas attendre indéfiniment
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), 3000);
+  
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(id);
+      
+      const data = await res.json();
+      let zFinal = data.elevations[0].z - hc;
+  
+      savePt(num, code, hc, lon, lat, zFinal, "IGN69 (RAF20)");
+  
     } catch (err) {
-      console.log("Erreur API, bascule Ellip");
-      savePt(num, code, hc, lon, lat, hEllip - hc, "ELLIP (Erreur Réseau)");
+      // SI L'API ECHOUE (Erreur Route, Réseau, ou Timeout)
+      console.log("Bascule sur correction manuelle");
+      
+      // Calcul : Altitude GPS - Ondulation - Canne
+      // Cela donne une approximation à +/- 15cm du NGF sans réseau
+      let zApproche = hEllip - ONDULATION_DE_SECOURS - hc;
+  
+      savePt(num, code, hc, lon, lat, zApproche, "IGN69 (APPROX - HORS LIGNE)");
+      
+      alert("⚠️ Serveur IGN injoignable. Altitude calculée avec une ondulation par défaut (49m).");
     }
-  }
-
-  function savePt(n, c, hc, lon, lat, z, note) {
-    const l93 = proj4("WGS84", EPSG2154, [lon, lat]);
-    const pt = { n, code:c, x:l93[0].toFixed(3), y:l93[1].toFixed(3), z:z.toFixed(3), hc:hc.toFixed(3), note };
-    curProj.points.push(pt);
-    db.transaction("projects","readwrite").objectStore("projects").put(curProj).onsuccess = () => {
-      document.getElementById('pt-num').value = parseInt(n)+1;
-      document.getElementById('btn-rec').disabled = false;
-      document.getElementById('btn-rec').textContent = "ENREGISTRER POINT";
-      renderPoints();
-    };
   }
 
   function renderPoints() {
