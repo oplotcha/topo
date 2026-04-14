@@ -22,9 +22,17 @@
 
     /* Dashboard */
     .dashboard { background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
-    .main-coords { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; text-align: center; }
-    .val { font-size: 16px; font-weight: 900; color: #fff; font-family: monospace; }
-    .label { font-size: 9px; color: #888; text-transform: uppercase; }
+    .coords-line { font-size: 13px; font-family: monospace; color: #ccc; letter-spacing: 0.04em; margin-bottom: 12px; display: flex; gap: 16px; flex-wrap: wrap; }
+    .coords-line span { color: #fff; font-weight: bold; }
+    .prec-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; text-align: center; }
+    .prec-val { font-size: 14px; font-weight: 900; font-family: monospace; }
+    .prec-val.good { color: #4ade80; }
+    .prec-val.mid  { color: #fbbf24; }
+    .prec-val.bad  { color: #f87171; }
+    .label { font-size: 9px; color: #888; text-transform: uppercase; margin-top: 2px; }
+    .rtk-fix   { color: #4ade80; }
+    .rtk-float { color: #fbbf24; }
+    .rtk-none  { color: #666; }
 
     /* UI */
     input { width: 100%; background: #000; border: 2px solid #333; border-radius: 10px; padding: 14px; color: #fff; font-size: 16px; }
@@ -53,14 +61,28 @@
       <b id="cur-name" style="color:#4ade80"></b>
       <button class="btn-small" onclick="location.reload()">Menu</button>
     </div>
-
-    <div class="dashboard">
-      <div class="main-coords">
-        <div><div class="label">X</div><div class="val" id="x-v">—</div></div>
-        <div><div class="label">Y</div><div class="val" id="y-v">—</div></div>
-        <div><div class="label">Z</div><div class="val" id="z-v">—</div></div>
+  <div class="dashboard">
+    <div class="coords-line">
+      <span>E=</span><span id="x-v">—</span>
+      <span>N=</span><span id="y-v">—</span>
+      <span>Z=</span><span id="z-v">—</span>
+    </div>
+    <div class="prec-grid">
+      <div>
+        <div class="prec-val bad" id="prec-plani">—</div>
+        <div class="label">Préc. plani</div>
+      </div>
+      <div>
+        <div class="prec-val bad" id="prec-alti">—</div>
+        <div class="label">Préc. alti</div>
+      </div>
+      <div>
+        <div class="prec-val rtk-none" id="rtk-status">—</div>
+        <div class="label">RTK</div>
       </div>
     </div>
+  </div>
+
 
     <div class="record-section">
       <input type="text" id="pt-name" placeholder="N°" inputmode="decimal">
@@ -123,8 +145,29 @@
       const l93 = proj4("WGS84", EPSG2154, [p.coords.longitude, p.coords.latitude]);
       document.getElementById('x-v').textContent = l93[0].toFixed(2);
       document.getElementById('y-v').textContent = l93[1].toFixed(2);
-      document.getElementById('z-v').textContent = p.coords.altitude ? p.coords.altitude.toFixed(2) : 'N/D';
+      document.getElementById('z-v').textContent = p.coords.altitude !== null ? p.coords.altitude.toFixed(2) : 'N/D';
       document.getElementById('btn-rec').disabled = false;
+      
+      const hAcc = p.coords.accuracy;
+      const vAcc = p.coords.altitudeAccuracy;
+      
+      const pEl = document.getElementById('prec-plani');
+      pEl.textContent = hAcc.toFixed(2) + ' m';
+      pEl.className = 'prec-val ' + (hAcc < 0.05 ? 'good' : hAcc < 1 ? 'mid' : 'bad');
+      
+      const aEl = document.getElementById('prec-alti');
+      if (vAcc !== null) {
+        aEl.textContent = vAcc.toFixed(2) + ' m';
+        aEl.className = 'prec-val ' + (vAcc < 0.1 ? 'good' : vAcc < 2 ? 'mid' : 'bad');
+      } else {
+        aEl.textContent = 'N/D';
+        aEl.className = 'prec-val rtk-none';
+      }
+      
+      const rEl = document.getElementById('rtk-status');
+      if (hAcc < 0.05)      { rEl.textContent = 'FIXE';  rEl.className = 'prec-val rtk-fix'; }
+      else if (hAcc < 0.5)  { rEl.textContent = 'FLOAT'; rEl.className = 'prec-val rtk-float'; }
+      else                  { rEl.textContent = 'N/A';   rEl.className = 'prec-val rtk-none'; }
     }, null, { enableHighAccuracy: true });
   }
 
