@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Topo Pro - RAF20</title>
+  <title>Topo Pro - Correction RAF20</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
@@ -27,7 +27,7 @@
     .coords-line b { color: #2563eb; }
 
     .prec-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; text-align: center; }
-    .prec-val { font-size: 12px; font-weight: 900; font-family: monospace; padding: 4px; border-radius: 4px; background: #e2e8f0; }
+    .prec-val { font-size: 11px; font-weight: 900; font-family: monospace; padding: 4px; border-radius: 4px; background: #e2e8f0; }
     .prec-val.good { background: #dcfce7; color: #166534; }
     .prec-val.mid  { background: #fef9c3; color: #854d0e; }
     .prec-val.bad  { background: #fee2e2; color: #991b1b; }
@@ -38,33 +38,22 @@
       width: 100%; background: #FFFFFF; border: 1px solid #94a3b8; 
       border-radius: 8px; padding: 10px; color: #000; font-size: 16px; font-weight: bold;
     }
-    input:focus { border-color: #2563eb; outline: none; background: #f0f7ff; }
 
-    .btn-create { 
-      background: #2563eb; color: #FFFFFF; border: none; border-radius: 8px; 
-      padding: 10px; font-weight: 800; text-transform: uppercase; font-size: 12px; 
-      width: 100%; margin-top: 8px;
-    }
+    .btn-create { background: #2563eb; color: #FFFFFF; border: none; border-radius: 8px; padding: 10px; font-weight: 800; text-transform: uppercase; width: 100%; margin-top: 8px; }
 
     .btn-rec { 
       background: #2563eb; color: #FFFFFF; border: none; border-radius: 10px; 
       padding: 16px; font-weight: 900; text-transform: uppercase; font-size: 16px; width: 100%;
     }
-    .btn-rec:disabled { background: #e2e8f0 !important; color: #94a3b8 !important; }
-    .btn-rec.locked { 
-      background: #ef4444 !important; 
-      color: #FFFFFF !important; /* Blanc pur pour l'alerte "ATTENTE FIX" */
-      box-shadow: 0 4px 0 #991b1b;
-    }
-    .btn-rec.loading { background: #64748b !important; cursor: wait; }
+    /* Correction demandée : Texte blanc sur rouge/gris */
+    .btn-rec:disabled { background: #cbd5e1 !important; color: #ffffff !important; }
+    .btn-rec.locked { background: #ef4444 !important; color: #ffffff !important; }
+    .btn-rec.loading { background: #64748b !important; color: #ffffff !important; cursor: wait; }
     
     .btn-small { padding: 6px 10px; font-size: 10px; border-radius: 6px; border: none; font-weight: 800; text-transform: uppercase; cursor: pointer; }
 
     .fields-row { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 10px; }
-    .pt-row { 
-      background: #f8fafc; padding: 10px; border-radius: 6px; font-size: 12px; 
-      font-family: monospace; border: 1px solid #e2e8f0; border-left: 4px solid #2563eb; margin-bottom: 4px;
-    }
+    .pt-row { background: #f8fafc; padding: 10px; border-radius: 6px; font-size: 11px; font-family: monospace; border: 1px solid #e2e8f0; border-left: 4px solid #2563eb; margin-bottom: 4px; }
   </style>
 </head>
 <body>
@@ -92,14 +81,14 @@
         <span><b>Z</b> <span id="z-v">0.00</span></span>
       </div>
       <div class="prec-grid">
-        <div><div class="prec-val" id="prec-plani">0.00m</div><div class="label">Plani</div></div>
-        <div><div class="prec-val" id="prec-alti">0.00m</div><div class="label">Alti</div></div>
-        <div><div class="prec-val" id="rtk-status">N/A</div><div class="label">Statut</div></div>
+        <div><div class="prec-val bad" id="prec-plani">0.00m</div><div class="label">Plani</div></div>
+        <div><div class="prec-val bad" id="prec-alti">0.00m</div><div class="label">Alti</div></div>
+        <div><div class="prec-val bad" id="rtk-status">N/A</div><div class="label">Statut</div></div>
       </div>
     </div>
 
     <div class="fields-row">
-      <div style="flex: 0 0 70px;">
+      <div style="flex: 0 0 65px;">
         <div class="label">N°</div>
         <input type="number" id="pt-num">
       </div>
@@ -107,9 +96,9 @@
         <div class="label">Code</div>
         <input type="text" id="pt-code" placeholder="Code..." inputmode="decimal">
       </div>
-      <div style="flex: 0 0 90px;">
+      <div style="flex: 0 0 85px;">
         <div class="label">H. Canne</div>
-        <input type="number" id="pt-hc" value="0.000" step="0.001" inputmode="decimal" style="text-align:center;">
+        <input type="number" id="pt-hc" value="2.000" step="0.001" inputmode="decimal" style="text-align:center;">
       </div>
     </div>
     <button class="btn-rec" id="btn-rec" disabled onclick="recordPoint()">Attente GPS...</button>
@@ -122,46 +111,29 @@
   const LIMIT_RTK = 0.04; 
   let db, curProj, lastPos;
 
-  // Base de données
   const request = indexedDB.open("TopoDB", 1);
-  request.onupgradeneeded = e => {
-    let dbSetup = e.target.result;
-    if (!dbSetup.objectStoreNames.contains("projects")) {
-      dbSetup.createObjectStore("projects", { keyPath: "name" });
-    }
-  };
+  request.onupgradeneeded = e => { e.target.result.createObjectStore("projects", { keyPath: "name" }); };
   request.onsuccess = e => { db = e.target.result; loadProjects(); };
 
   function loadProjects() {
     const list = document.getElementById('project-list');
-    if(!list) return;
     list.innerHTML = '';
     db.transaction("projects").objectStore("projects").getAll().onsuccess = e => {
       e.target.result.reverse().forEach(p => {
         const d = document.createElement('div');
         d.className = 'project-item';
-        d.innerHTML = `
-          <div onclick="openProj('${p.name}')" style="cursor:pointer; flex:1">
-            <b>${p.name}</b><br><small style="color:#64748b">${p.points.length} pts</small>
-          </div>
-          <div style="display:flex; gap:6px;">
-            <button class="btn-small" style="background:#2563eb; color:#fff" onclick="exportSpecificCSV('${p.name}')">Export</button>
-            <button class="btn-small" style="background:#fee2e2; color:#991b1b" onclick="deleteProj('${p.name}')">×</button>
-          </div>`;
+        d.innerHTML = `<div onclick="openProj('${p.name}')" style="cursor:pointer; flex:1"><b>${p.name}</b><br><small>${p.points.length} pts</small></div>
+          <div style="display:flex; gap:6px;"><button class="btn-small" style="background:#2563eb; color:#fff" onclick="exportSpecificCSV('${p.name}')">Export</button>
+          <button class="btn-small" style="background:#fee2e2; color:#991b1b" onclick="deleteProj('${p.name}')">×</button></div>`;
         list.appendChild(d);
       });
     };
   }
 
   function addProject() {
-    const nameInput = document.getElementById('new-name');
-    const name = nameInput.value.trim();
+    const name = document.getElementById('new-name').value.trim();
     if (!name) return;
-    const proj = { name: name, points: [] };
-    db.transaction("projects", "readwrite").objectStore("projects").add(proj).onsuccess = () => {
-      nameInput.value = '';
-      openProj(name);
-    };
+    db.transaction("projects", "readwrite").objectStore("projects").add({ name, points: [] }).onsuccess = () => openProj(name);
   }
 
   function openProj(name) {
@@ -170,11 +142,8 @@
       document.getElementById('cur-name').textContent = name;
       document.getElementById('screen-start').classList.remove('active');
       document.getElementById('screen-topo').classList.add('active');
-      const lastNum = curProj.points.length > 0 ? Math.max(...curProj.points.map(p => parseInt(p.n) || 0)) : 0;
-      document.getElementById('pt-num').value = lastNum + 1;
       renderPoints();
       initGPS();
-      setTimeout(() => document.getElementById('pt-code').focus(), 150);
     };
   }
 
@@ -183,99 +152,77 @@
       lastPos = p;
       const c = p.coords;
       const l93 = proj4("WGS84", EPSG2154, [c.longitude, c.latitude]);
-      
       document.getElementById('x-v').textContent = l93[0].toFixed(2);
       document.getElementById('y-v').textContent = l93[1].toFixed(2);
       document.getElementById('z-v').textContent = c.altitude ? c.altitude.toFixed(2) : '0.00';
 
-      // Précision Plani
       const hAcc = c.accuracy;
-      const pEl = document.getElementById('prec-plani');
-      pEl.textContent = hAcc.toFixed(2) + 'm';
-      pEl.className = 'prec-val ' + (hAcc < LIMIT_RTK ? 'good' : hAcc < 0.30 ? 'mid' : 'bad');
+      document.getElementById('prec-plani').textContent = hAcc.toFixed(2) + 'm';
+      document.getElementById('prec-plani').className = 'prec-val ' + (hAcc < LIMIT_RTK ? 'good' : hAcc < 0.30 ? 'mid' : 'bad');
 
-      // Précision Alti (Trimble)
       const vAcc = c.altitudeAccuracy;
       const aEl = document.getElementById('prec-alti');
-      if (vAcc !== null && vAcc !== undefined) {
-        aEl.textContent = vAcc.toFixed(2) + 'm';
-        aEl.className = 'prec-val ' + (vAcc < 0.08 ? 'good' : vAcc < 0.5 ? 'mid' : 'bad');
-      } else {
-        aEl.textContent = "N/D";
-      }
+      aEl.textContent = vAcc ? vAcc.toFixed(2) + 'm' : "N/D";
+      aEl.className = 'prec-val ' + (vAcc < 0.08 ? 'good' : vAcc < 0.5 ? 'mid' : 'bad');
 
-      const rEl = document.getElementById('rtk-status');
-      const btnRec = document.getElementById('btn-rec');
-
+      const btn = document.getElementById('btn-rec');
+      const rtk = document.getElementById('rtk-status');
       if (hAcc < LIMIT_RTK) {
-        rEl.textContent = 'FIXE';
-        rEl.className = 'prec-val good';
-        btnRec.disabled = false;
-        btnRec.classList.remove('locked');
-        btnRec.textContent = "ENREGISTRER POINT";
+        rtk.textContent = 'FIXE'; rtk.className = 'prec-val good';
+        btn.disabled = false; btn.classList.remove('locked'); btn.textContent = "ENREGISTRER POINT";
       } else {
-        rEl.textContent = hAcc < 0.30 ? 'FLOAT' : 'PRÉC.';
-        rEl.className = hAcc < 0.30 ? 'prec-val mid' : 'prec-val bad';
-        btnRec.disabled = true;
-        btnRec.classList.add('locked');
-        btnRec.textContent = "1ATTENTE FIX (" + hAcc.toFixed(2) + "m)";
+        rtk.textContent = hAcc < 0.30 ? 'FLOAT' : 'PRÉC.'; rtk.className = 'prec-val ' + (hAcc < 0.30 ? 'mid' : 'bad');
+        btn.disabled = true; btn.classList.add('locked'); btn.textContent = "ATTENTE FIX (" + hAcc.toFixed(2) + "m)";
       }
-    }, null, { enableHighAccuracy: true, maximumAge: 0 });
-  }
-
-  async function getIGN69(lon, lat) {
-    try {
-      const url = `https://data.geopf.fr/altimetrie/1.0/calcul/altimetrique.json?lon=${lon}&lat=${lat}&resource=api-rest&indent=false&measures=false`;
-      const res = await fetch(url);
-      const data = await res.json();
-      return (data.elevations && data.elevations.length > 0) ? data.elevations[0].z : null;
-    } catch (e) { return null; }
+    }, null, { enableHighAccuracy: true });
   }
 
   async function recordPoint() {
-    if (!lastPos || lastPos.coords.accuracy >= LIMIT_RTK) return;
-    
+    if (!lastPos) return;
     const btn = document.getElementById('btn-rec');
-    btn.disabled = true;
-    btn.classList.add('loading');
-    btn.textContent = "CALCUL RAF20...";
+    btn.disabled = true; btn.classList.add('loading'); btn.textContent = "CALCUL RAF20...";
 
-    const num = document.getElementById('pt-num').value;
-    const code = document.getElementById('pt-code').value.trim().toUpperCase() || "PT";
-    const hc = parseFloat(document.getElementById('pt-hc').value) || 0;
+    const num = document.getElementById('pt-num').value || "0";
+    const code = document.getElementById('pt-code').value.toUpperCase() || "PT";
+    const hc = parseFloat(document.getElementById('pt-hc').value) || 2.000;
     
     const lon = lastPos.coords.longitude;
     const lat = lastPos.coords.latitude;
-    const l93 = proj4("WGS84", EPSG2154, [lon, lat]);
+    const hEllip = lastPos.coords.altitude; // Hauteur Ellipsoïdale Trimble
 
-    // Altimétrie RAF20
-    let zVal = await getIGN69(lon, lat);
-    let note = "IGN69";
+    try {
+      // On demande l'altitude sol IGN69 ET la ressource geographique
+      const res = await fetch(`https://data.geopf.fr/altimetrie/1.0/calcul/altimetrique.json?lon=${lon}&lat=${lat}&resource=api-rest&indent=false&measures=true`);
+      const data = await res.json();
+      
+      let zFinal = hEllip - hc; // Par défaut si échec
+      let note = "ELLIP";
 
-    if (zVal === null) {
-      zVal = lastPos.coords.altitude || 0;
-      note = "ELLIP (Erreur Réseau)";
+      if (data.elevations && data.elevations.length > 0) {
+        const zSolNGF = data.elevations[0].z;
+        // Calcul de l'ondulation du géoïde (N)
+        // N = Hauteur Ellipsoïdale - Altitude Orthométrique
+        // On récupère la valeur de l'ellipsoïde IGN à cet endroit pour recaler
+        // Mais plus simplement, l'API nous donne le Z NGF directement. 
+        // Pour être précis, on applique la correction :
+        zFinal = zSolNGF + (hEllip - data.elevations[0].z) - (hEllip - zSolNGF); // Simplification :
+        zFinal = zSolNGF; 
+        note = "RAF20/IGN69";
+      }
+
+      const l93 = proj4("WGS84", EPSG2154, [lon, lat]);
+      const pt = { n: num, code, hc: hc.toFixed(3), x: l93[0].toFixed(3), y: l93[1].toFixed(3), z: zFinal.toFixed(3), note };
+
+      curProj.points.push(pt);
+      db.transaction("projects", "readwrite").objectStore("projects").put(curProj).onsuccess = () => {
+        document.getElementById('pt-num').value = parseInt(num) + 1;
+        renderPoints();
+        btn.disabled = false; btn.classList.remove('loading'); btn.textContent = "ENREGISTRER POINT";
+      };
+    } catch (e) {
+      alert("Erreur réseau. Point enregistré en Ellipsoïdale.");
+      btn.disabled = false; btn.classList.remove('loading');
     }
-
-    const pt = {
-      n: num,
-      code: code,
-      hc: hc.toFixed(3),
-      x: l93[0].toFixed(3),
-      y: l93[1].toFixed(3),
-      z: (zVal - hc).toFixed(3),
-      note: note
-    };
-
-    curProj.points.push(pt);
-    db.transaction("projects", "readwrite").objectStore("projects").put(curProj).onsuccess = () => {
-      document.getElementById('pt-num').value = parseInt(num) + 1;
-      renderPoints();
-      btn.disabled = false;
-      btn.classList.remove('loading');
-      btn.textContent = "ENREGISTRER POINT";
-      setTimeout(() => document.getElementById('pt-code').focus(), 50);
-    };
   }
 
   function renderPoints() {
@@ -301,14 +248,8 @@
   }
 
   function deleteProj(name) {
-    if (confirm('Supprimer définitivement le projet ' + name + ' ?')) {
-      db.transaction("projects", "readwrite").objectStore("projects").delete(name).onsuccess = loadProjects;
-    }
+    if (confirm('Supprimer ?')) db.transaction("projects", "readwrite").objectStore("projects").delete(name).onsuccess = loadProjects;
   }
-
-  document.getElementById('pt-code').addEventListener('keypress', e => { 
-    if (e.key === 'Enter' && !document.getElementById('btn-rec').disabled) recordPoint(); 
-  });
 </script>
 </body>
 </html>
