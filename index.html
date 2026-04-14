@@ -180,48 +180,84 @@
   async function recordPoint() {
     if (!lastPos) return;
     const btn = document.getElementById('btn-rec');
-    btn.disabled = true; btn.classList.add('loading'); btn.textContent = "CALCUL RAF20...";
-
+    btn.disabled = true; 
+    btn.classList.add('loading'); 
+    btn.textContent = "CALCUL RAF20...";
+  
     const num = document.getElementById('pt-num').value || "0";
     const code = document.getElementById('pt-code').value.toUpperCase() || "PT";
     const hc = parseFloat(document.getElementById('pt-hc').value) || 2.000;
     
     const lon = lastPos.coords.longitude;
     const lat = lastPos.coords.latitude;
-    const hEllip = lastPos.coords.altitude; // Hauteur Ellipsoïdale Trimble
-
+    const hEllip = lastPos.coords.altitude; 
+  
     try {
-      // On demande l'altitude sol IGN69 ET la ressource geographique
-      const res = await fetch(`https://data.geopf.fr/altimetrie/1.0/calcul/altimetrique.json?lon=${lon}&lat=${lat}&resource=api-rest&indent=false&measures=true`);
-      const data = await res.json();
+      // Utilisation de l'API avec des paramètres de secours
+      const response = await fetch(`https://data.geopf.fr/altimetrie/1.0/calcul/altimetrique.json?lon=${lon}&lat=${lat}&resource=api-rest&indent=false`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      });
+  
+      if (!response.ok) throw new Error("Réponse serveur non OK");
+  
+      const data = await response.json();
       
-      let zFinal = hEllip - hc; // Par défaut si échec
-      let note = "ELLIP";
-
+      let zFinal;
+      let note = "IGN69";
+  
       if (data.elevations && data.elevations.length > 0) {
-        const zSolNGF = data.elevations[0].z;
-        // Calcul de l'ondulation du géoïde (N)
-        // N = Hauteur Ellipsoïdale - Altitude Orthométrique
-        // On récupère la valeur de l'ellipsoïde IGN à cet endroit pour recaler
-        // Mais plus simplement, l'API nous donne le Z NGF directement. 
-        // Pour être précis, on applique la correction :
-        zFinal = zSolNGF + (hEllip - data.elevations[0].z) - (hEllip - zSolNGF); // Simplification :
-        zFinal = zSolNGF; 
-        note = "RAF20/IGN69";
+        // L'API nous donne directement le Z NGF (Orthométrique)
+        zFinal = data.elevations[0].z - hc;
+      } else {
+        throw new Error("Pas de donnée Z");
       }
-
+  
       const l93 = proj4("WGS84", EPSG2154, [lon, lat]);
-      const pt = { n: num, code, hc: hc.toFixed(3), x: l93[0].toFixed(3), y: l93[1].toFixed(3), z: zFinal.toFixed(3), note };
-
+      const pt = { 
+        n: num, 
+        code, 
+        hc: hc.toFixed(3), 
+        x: l93[0].toFixed(3), 
+        y: l93[1].toFixed(3), 
+        z: zFinal.toFixed(3), 
+        note 
+      };
+  
       curProj.points.push(pt);
       db.transaction("projects", "readwrite").objectStore("projects").put(curProj).onsuccess = () => {
         document.getElementById('pt-num').value = parseInt(num) + 1;
         renderPoints();
-        btn.disabled = false; btn.classList.remove('loading'); btn.textContent = "ENREGISTRER POINT";
+        btn.disabled = false; 
+        btn.classList.remove('loading'); 
+        btn.textContent = "ENREGISTRER POINT";
       };
+  
     } catch (e) {
-      alert("Erreur réseau. Point enregistré en Ellipsoïdale.");
-      btn.disabled = false; btn.classList.remove('loading');
+      // En cas d'échec (Zone blanche ou erreur serveur IGN)
+      console.error(e);
+      const l93 = proj4("WGS84", EPSG2154, [lon, lat]);
+      const zEllip = hEllip - hc;
+      
+      const pt = { 
+        n: num, 
+        code, 
+        hc: hc.toFixed(3), 
+        x: l93[0].toFixed(3), 
+        y: l93[1].toFixed(3), 
+        z: zEllip.toFixed(3), 
+        note: "ELLIP (HORS-LIGNE)" 
+      };
+  
+      curProj.points.push(pt);
+      db.transaction("projects", "readwrite").objectStore("projects").put(curProj).onsuccess = () => {
+        document.getElementById('pt-num').value = parseInt(num) + 1;
+        renderPoints();
+        btn.disabled = false; 
+        btn.classList.remove('loading'); 
+        btn.textContent = "ENREGISTRER POINT";
+        alert("⚠️ MODE HORS-LIGNE : L'altitude enregistrée est ellipsoïdale (pas de correction RAF20).");
+      };
     }
   }
 
