@@ -153,7 +153,7 @@
       
       const pEl = document.getElementById('prec-plani');
       pEl.textContent = hAcc.toFixed(2) + ' m';
-      pEl.className = 'prec-val ' + (hAcc < 0.05 ? 'good' : hAcc < 1 ? 'mid' : 'bad');
+      pEl.className = 'prec-val ' + (hAcc < 0.03 ? 'good' : hAcc < 1 ? 'mid' : 'bad');
       
       const aEl = document.getElementById('prec-alti');
       if (vAcc !== null) {
@@ -165,8 +165,8 @@
       }
       
       const rEl = document.getElementById('rtk-status');
-      if (hAcc < 0.05)      { rEl.textContent = 'FIXE';  rEl.className = 'prec-val rtk-fix'; }
-      else if (hAcc < 0.5)  { rEl.textContent = 'FLOAT'; rEl.className = 'prec-val rtk-float'; }
+      if (hAcc < 0.03)      { rEl.textContent = 'FIXE';  rEl.className = 'prec-val rtk-fix'; }
+      else if (hAcc < 0.3)  { rEl.textContent = 'FLOAT'; rEl.className = 'prec-val rtk-float'; }
       else                  { rEl.textContent = 'N/A';   rEl.className = 'prec-val rtk-none'; }
     }, null, { enableHighAccuracy: true });
   }
