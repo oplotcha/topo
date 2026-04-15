@@ -125,6 +125,23 @@
   const LIMIT_RTK = 0.04; // Tolérance Fixe à 4cm
   let db, curProj, lastPos, watchId;
 
+  // Fonction pour générer un bip sonore (800Hz pendant 0.1s)
+  function beep() {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+  
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+  
+    oscillator.type = 'sine'; // Son pur
+    oscillator.frequency.setValueAtTime(800, audioCtx.currentTime); // Fréquence en Hz
+    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); // Volume
+  
+    oscillator.start();
+    oscillator.stop(audioCtx.currentTime + 0.1); // Durée 100ms
+  }
+  
   // 1. Initialisation Base de Données
   const req = indexedDB.open("TopoDB", 1);
   req.onupgradeneeded = e => e.target.result.createObjectStore("projects", { keyPath: "name" });
