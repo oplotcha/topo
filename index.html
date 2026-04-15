@@ -3,33 +3,67 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Topo Pro V3</title>
+  <title>Topo Pro - Édition Terrain</title>
   
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Topo Pro">
+  <meta name="theme-color" content="#2563eb">
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
   
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
-    body { font-family: 'Segoe UI', sans-serif; background: #fff; color: #000; padding: 15px; }
+    body { font-family: 'Segoe UI', Roboto, sans-serif; background: #fff; color: #000; padding: 15px; }
     .screen { display: none; max-width: 500px; margin: 0 auto; }
     .active { display: block; }
-    h2 { font-size: 10px; color: #64748b; text-transform: uppercase; margin: 15px 0 8px; font-weight: 800; }
+    
+    h2 { font-size: 11px; color: #64748b; text-transform: uppercase; margin: 15px 0 8px; font-weight: 800; letter-spacing: 0.5px; }
     .card { background: #f8fafc; padding: 12px; border-radius: 10px; border: 1px solid #cbd5e1; margin-bottom: 15px; }
+    
     .dashboard { background: #f1f5f9; border: 1px solid #94a3b8; border-radius: 10px; padding: 12px; margin-bottom: 12px; }
     .coords-line { font-size: 13px; font-family: monospace; display: flex; justify-content: space-between; margin-bottom: 10px; }
+    .coords-line b { color: #2563eb; }
+    
     .prec-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; text-align: center; }
-    .prec-val { font-size: 11px; font-weight: 900; font-family: monospace; padding: 4px; border-radius: 4px; background: #e2e8f0; }
+    .prec-val { font-size: 12px; font-weight: 900; font-family: monospace; padding: 4px; border-radius: 4px; background: #e2e8f0; }
     .good { background: #dcfce7; color: #166534; }
+    .mid { background: #fef9c3; color: #854d0e; }
     .bad { background: #fee2e2; color: #991b1b; }
-    input { width: 100%; border: 1px solid #94a3b8; border-radius: 8px; padding: 10px; font-size: 16px; font-weight: bold; margin-bottom: 5px; }
-    .btn-rec { width: 100%; padding: 16px; border-radius: 10px; border: none; font-weight: 900; text-transform: uppercase; font-size: 16px; color: #fff; background: #2563eb; cursor: pointer; }
-    .btn-rec:disabled { background: #cbd5e1 !important; color: #fff !important; }
+    
+    .label { font-size: 10px; color: #64748b; font-weight: bold; margin-bottom: 2px; display: block;}
+    input { width: 100%; border: 1px solid #94a3b8; border-radius: 8px; padding: 12px; font-size: 16px; font-weight: bold; margin-bottom: 8px; background: #fff; color: #000;}
+    
+    .btn-rec { width: 100%; padding: 18px; border-radius: 10px; border: none; font-weight: 900; text-transform: uppercase; font-size: 16px; color: #fff; background: #2563eb; cursor: pointer; transition: 0.2s;}
+    .btn-rec:disabled { background: #cbd5e1 !important; color: #fff !important; cursor: not-allowed; }
     .btn-rec.locked { background: #ef4444 !important; color: #fff !important; }
-    .btn-small { padding: 6px 10px; font-size: 10px; border-radius: 6px; border: none; font-weight: 800; cursor: pointer; }
-    .pt-row { background: #f8fafc; padding: 10px; border-radius: 6px; font-size: 11px; border: 1px solid #e2e8f0; border-left: 4px solid #2563eb; margin-bottom: 4px; font-family: monospace; }
+    .btn-rec.loading { background: #64748b !important; color: #fff !important; cursor: wait; }
+    
+    .btn-small { padding: 8px 12px; font-size: 11px; border-radius: 6px; border: none; font-weight: 800; cursor: pointer; text-transform: uppercase; }
+    .btn-blue { background: #2563eb; color: #fff; }
+    .btn-dark { background: #1e293b; color: #fff; }
+    
+    /* Zone de liste avec ascenseur (Scroll) */
+    #pt-list-container { 
+      margin-top: 15px; 
+      max-height: 220px; 
+      overflow-y: auto; 
+      border: 1px solid #e2e8f0; 
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+    
+    .pt-row { 
+      padding: 12px; 
+      border-bottom: 1px solid #e2e8f0; 
+      font-size: 14px; 
+      display: flex; 
+      justify-content: space-between;
+      font-family: monospace;
+      align-items: center;
+    }
+    .pt-row:last-child { border-bottom: none; }
+    .pt-num-badge { background: #2563eb; color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: bold;}
   </style>
 </head>
 <body>
@@ -38,22 +72,23 @@
     <h2>Nouveau projet</h2>
     <div class="card">
       <input type="text" id="new-name" placeholder="NOM DU CHANTIER...">
-      <button class="btn-rec" style="font-size:12px; padding:10px;" onclick="addProject()">Créer projet</button>
+      <button class="btn-rec" style="font-size:14px; padding:12px;" onclick="addProject()">Créer le projet</button>
     </div>
+    <h2>Chantiers en mémoire</h2>
     <div id="project-list"></div>
   </div>
 
   <div id="screen-topo" class="screen">
-    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-      <b id="cur-name" style="color:#2563eb"></b>
-      <button class="btn-small" onclick="location.reload()">Menu</button>
+    <div style="display:flex; justify-content:space-between; margin-bottom:12px; align-items:center;">
+      <b id="cur-name" style="color:#2563eb; font-size: 18px; text-transform: uppercase;"></b>
+      <button class="btn-small btn-dark" onclick="goBack()">Retour Menu</button>
     </div>
 
     <div class="dashboard">
       <div class="coords-line">
-        <span>E: <span id="x-v">0.00</span></span>
-        <span>N: <span id="y-v">0.00</span></span>
-        <span>Z: <span id="z-v">0.00</span></span>
+        <span><b>E</b> <span id="x-v">0.00</span></span>
+        <span><b>N</b> <span id="y-v">0.00</span></span>
+        <span><b>Z</b> <span id="z-v">0.00</span></span>
       </div>
       <div class="prec-grid">
         <div id="prec-plani" class="prec-val">0.00m</div>
@@ -62,21 +97,35 @@
       </div>
     </div>
 
-    <div style="display:flex; gap:5px; margin-bottom:10px;">
-      <div style="width:60px"><small>N°</small><input type="number" id="pt-num"></div>
-      <div style="flex:1"><small>Code</small><input type="text" id="pt-code" inputmode="decimal"></div>
-      <div style="width:80px"><small>H. Canne</small><input type="number" id="pt-hc" value="2.000" step="0.001"></div>
+    <div style="display:flex; gap:8px; margin-bottom:10px;">
+      <div style="width:70px">
+        <span class="label">N°</span>
+        <input type="number" id="pt-num" inputmode="numeric">
+      </div>
+      <div style="flex:1">
+        <span class="label">Code</span>
+        <input type="text" id="pt-code" placeholder="Ex: BORD" onfocus="this.select()">
+      </div>
+      <div style="width:85px">
+        <span class="label">H. Canne</span>
+        <input type="number" id="pt-hc" value="2.000" step="0.001" inputmode="decimal" style="text-align:center;">
+      </div>
     </div>
 
     <button id="btn-rec" class="btn-rec" disabled onclick="recordPoint()">Attente GPS...</button>
-    <div id="pt-list" style="margin-top:15px"></div>
+    
+    <div id="pt-list-container">
+      <div id="pt-list"></div>
+    </div>
   </div>
 
 <script>
+  // Paramètres système
   const EPSG2154 = "+proj=lcc +lat_1=49 +lat_2=44 +lat_0=46.5 +lon_0=3 +x_0=700000 +y_0=6600000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs";
-  let db, curProj, lastPos;
+  const LIMIT_RTK = 0.04; // Tolérance Fixe à 4cm
+  let db, curProj, lastPos, watchId;
 
-  // DB
+  // 1. Initialisation Base de Données
   const req = indexedDB.open("TopoDB", 1);
   req.onupgradeneeded = e => e.target.result.createObjectStore("projects", { keyPath: "name" });
   req.onsuccess = e => { db = e.target.result; loadProjects(); };
@@ -88,61 +137,92 @@
       e.target.result.reverse().forEach(p => {
         const d = document.createElement('div');
         d.className = 'card';
-        d.style.display = 'flex'; d.style.justifyContent = 'space-between';
-        d.innerHTML = `<span onclick="openProj('${p.name}')"><b>${p.name}</b> (${p.points.length} pts)</span>
-                       <button class="btn-small" onclick="exportCSV('${p.name}')">CSV</button>`;
+        d.style.display = 'flex'; d.style.justifyContent = 'space-between'; d.style.alignItems = 'center';
+        d.innerHTML = `
+          <div onclick="openProj('${p.name}')" style="cursor:pointer; flex:1; padding:5px 0;">
+            <b style="font-size:15px">${p.name}</b> <br>
+            <span style="color:#64748b; font-size:12px">${p.points.length} points</span>
+          </div>
+          <button class="btn-small btn-blue" onclick="exportCSV('${p.name}')">Export CSV</button>`;
         list.appendChild(d);
       });
     };
   }
 
   function addProject() {
-    const n = document.getElementById('new-name').value;
+    const n = document.getElementById('new-name').value.trim();
     if(!n) return;
-    db.transaction("projects","readwrite").objectStore("projects").add({name:n, points:[]}).onsuccess = () => openProj(n);
+    db.transaction("projects","readwrite").objectStore("projects").add({name:n, points:[]}).onsuccess = () => {
+      document.getElementById('new-name').value = '';
+      openProj(n);
+    };
   }
 
+  // 2. Gestion de l'interface du projet
   function openProj(n) {
     db.transaction("projects").objectStore("projects").get(n).onsuccess = e => {
       curProj = e.target.result;
       document.getElementById('cur-name').textContent = n;
       document.getElementById('screen-start').classList.remove('active');
       document.getElementById('screen-topo').classList.add('active');
-      document.getElementById('pt-num').value = curProj.points.length + 1;
-      initGPS();
+      
+      // Calcul intelligent du prochain numéro de point
+      const maxN = curProj.points.length > 0 ? Math.max(...curProj.points.map(p => parseInt(p.n) || 0)) : 0;
+      document.getElementById('pt-num').value = maxN + 1;
+      
+      renderPoints(); // Charge l'historique visuel
+      initGPS();      // Lance le capteur
     };
   }
 
+  function goBack() {
+    // Coupe le GPS pour économiser la batterie en mode menu
+    if (watchId) navigator.geolocation.clearWatch(watchId);
+    document.getElementById('screen-topo').classList.remove('active');
+    document.getElementById('screen-start').classList.add('active');
+    loadProjects();
+  }
+
+  // 3. Gestion du GPS
   function initGPS() {
-    navigator.geolocation.watchPosition(p => {
+    watchId = navigator.geolocation.watchPosition(p => {
       lastPos = p;
       const c = p.coords;
       const l93 = proj4("WGS84", EPSG2154, [c.longitude, c.latitude]);
+      
       document.getElementById('x-v').textContent = l93[0].toFixed(2);
       document.getElementById('y-v').textContent = l93[1].toFixed(2);
       document.getElementById('z-v').textContent = c.altitude ? c.altitude.toFixed(2) : '0.00';
       
       const hAcc = c.accuracy;
       const pEl = document.getElementById('prec-plani');
-      pEl.textContent = hAcc.toFixed(2)+'m';
-      pEl.className = 'prec-val ' + (hAcc < 0.05 ? 'good' : 'bad');
+      pEl.textContent = hAcc.toFixed(2) + 'm';
+      pEl.className = 'prec-val ' + (hAcc < LIMIT_RTK ? 'good' : (hAcc < 0.3 ? 'mid' : 'bad'));
+
+      const vAcc = c.altitudeAccuracy;
+      const aEl = document.getElementById('prec-alti');
+      aEl.textContent = vAcc ? vAcc.toFixed(2) + 'm' : "N/D";
+      aEl.className = 'prec-val ' + (vAcc < 0.08 ? 'good' : 'bad');
 
       const btn = document.getElementById('btn-rec');
-      if(hAcc < 0.05) {
-        btn.disabled = false; btn.classList.remove('locked'); btn.textContent = "ENREGISTRER POINT";
-        document.getElementById('rtk-status').textContent = "FIXE";
-        document.getElementById('rtk-status').className = 'prec-val good';
+      const rtk = document.getElementById('rtk-status');
+      
+      if(hAcc < LIMIT_RTK) {
+        btn.disabled = false; btn.classList.remove('locked', 'loading'); btn.textContent = "ENREGISTRER POINT";
+        rtk.textContent = "FIXE"; rtk.className = 'prec-val good';
       } else {
-        btn.disabled = true; btn.classList.add('locked'); btn.textContent = "ATTENTE FIX ("+hAcc.toFixed(2)+"m)";
-        document.getElementById('rtk-status').textContent = "PRÉC.";
-        document.getElementById('rtk-status').className = 'prec-val bad';
+        btn.disabled = true; btn.classList.add('locked'); btn.textContent = "ATTENTE FIX (" + hAcc.toFixed(2) + "m)";
+        rtk.textContent = "FLOAT"; rtk.className = 'prec-val bad';
       }
-    }, null, {enableHighAccuracy:true});
+    }, null, {enableHighAccuracy:true, maximumAge: 0});
   }
 
+  // 4. Enregistrement et Calcul RAF20 / Secours
   async function recordPoint() {
+    if (!lastPos) return;
+    
     const btn = document.getElementById('btn-rec');
-    btn.disabled = true; btn.textContent = "CALCUL RAF20...";
+    btn.disabled = true; btn.classList.add('loading'); btn.textContent = "CALCUL RAF20...";
     
     const num = document.getElementById('pt-num').value;
     const code = document.getElementById('pt-code').value.toUpperCase() || "PT";
@@ -151,46 +231,69 @@
     const lon = lastPos.coords.longitude;
     const lat = lastPos.coords.latitude;
     const hEllip = lastPos.coords.altitude;
-  
-    // CONSTANTE DE SECOURS (Ondulation moyenne en France ~49m)
-    // À ajuster selon ta région précise si tu veux plus de précision sans réseau
-    const ONDULATION_DE_SECOURS = 49.0; 
-  
+
+    // Valeur de secours si pas de réseau
+    const ONDULATION_MOYENNE = 49.0;
+
     try {
+      // Requête API IGN avec Timeout de 3 secondes
       const url = `https://data.geopf.fr/altimetrie/1.0/calcul/altimetrique.json?lon=${lon}&lat=${lat}&resource=api-rest&indent=false`;
-      
-      // On ajoute un timeout de 3 secondes pour ne pas attendre indéfiniment
       const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), 3000);
-  
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+
       const res = await fetch(url, { signal: controller.signal });
-      clearTimeout(id);
+      clearTimeout(timeoutId);
+      
+      if (!res.ok) throw new Error("Erreur Serveur IGN");
       
       const data = await res.json();
-      let zFinal = data.elevations[0].z - hc;
-  
-      savePt(num, code, hc, lon, lat, zFinal, "IGN69 (RAF20)");
-  
+      const zNGF = data.elevations[0].z; // Altitude du sol
+      
+      savePt(num, code, hc, lon, lat, zNGF - hc, "IGN69");
+
     } catch (err) {
-      // SI L'API ECHOUE (Erreur Route, Réseau, ou Timeout)
-      console.log("Bascule sur correction manuelle");
-      
-      // Calcul : Altitude GPS - Ondulation - Canne
-      // Cela donne une approximation à +/- 15cm du NGF sans réseau
-      let zApproche = hEllip - ONDULATION_DE_SECOURS - hc;
-  
-      savePt(num, code, hc, lon, lat, zApproche, "IGN69 (APPROX - HORS LIGNE)");
-      
-      alert("⚠️ Serveur IGN injoignable. Altitude calculée avec une ondulation par défaut (49m).");
+      // Bascule automatique sans internet
+      console.warn("Réseau indisponible, bascule sur ondulation moyenne.");
+      const zApproche = hEllip - ONDULATION_MOYENNE - hc;
+      savePt(num, code, hc, lon, lat, zApproche, "APPROX (HORS-LIGNE)");
     }
+  }
+
+  // 5. Sauvegarde et Interface
+  function savePt(n, c, hc, lon, lat, z, note) {
+    const l93 = proj4("WGS84", EPSG2154, [lon, lat]);
+    const pt = { 
+      n: n, 
+      code: c, 
+      x: l93[0].toFixed(3), 
+      y: l93[1].toFixed(3), 
+      z: z.toFixed(3), 
+      hc: hc.toFixed(3), 
+      note: note 
+    };
+    
+    curProj.points.push(pt);
+    db.transaction("projects","readwrite").objectStore("projects").put(curProj).onsuccess = () => {
+      // Incrémentation auto
+      document.getElementById('pt-num').value = parseInt(n) + 1;
+      
+      // Restauration du bouton
+      const btn = document.getElementById('btn-rec');
+      btn.disabled = false; btn.classList.remove('loading'); btn.textContent = "ENREGISTRER POINT";
+      
+      renderPoints();
+    };
   }
 
   function renderPoints() {
     const l = document.getElementById('pt-list');
     l.innerHTML = '';
-    [...curProj.points].reverse().slice(0,5).forEach(p => {
-      const d = document.createElement('div'); d.className='pt-row';
-      d.innerHTML = `<b>#${p.n}</b> [${p.code}] Z:${p.z} <small>(${p.note})</small>`;
+    // Affiche la liste avec les plus récents en haut
+    [...curProj.points].reverse().forEach(p => {
+      const d = document.createElement('div'); 
+      d.className = 'pt-row';
+      // Format d'affichage strict demandé : N° et Code
+      d.innerHTML = `<span class="pt-num-badge">#${p.n}</span> <b>${p.code}</b>`;
       l.appendChild(d);
     });
   }
@@ -198,11 +301,20 @@
   function exportCSV(n) {
     db.transaction("projects").objectStore("projects").get(n).onsuccess = e => {
       const p = e.target.result;
-      let csv = "Num,Code,X,Y,Z,HC,Note\n";
+      if (p.points.length === 0) {
+        alert("Le projet est vide.");
+        return;
+      }
+      
+      let csv = "\uFEFFNum,Code,X,Y,Z,Haut_Canne,Note\n";
       p.points.forEach(pt => csv += `${pt.n},${pt.code},${pt.x},${pt.y},${pt.z},${pt.hc},${pt.note}\n`);
-      const blob = new Blob([csv], {type:'text/csv'});
+      
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href=url; a.download=n+".csv"; a.click();
+      const a = document.createElement('a'); 
+      a.href = url; 
+      a.download = n.replace(/\s+/g, '_') + "_Export.csv"; 
+      a.click();
     };
   }
 </script>
