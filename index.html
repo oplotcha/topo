@@ -209,7 +209,7 @@
       
       document.getElementById('x-v').textContent = l93[0].toFixed(2);
       document.getElementById('y-v').textContent = l93[1].toFixed(2);
-      document.getElementById('z-v').textContent = c.altitude ? c.altitude.toFixed(2) : '0.00';
+      document.getElementById('z-v').textContent = c.altitude !== null ? c.altitude.toFixed(2) : 'N/D';
       
       const hAcc = c.accuracy;
       const pEl = document.getElementById('prec-plani');
@@ -235,46 +235,16 @@
   }
 
   // 4. Enregistrement et Calcul RAF20 / Secours
-  async function recordPoint() {
-    if (!lastPos) return;
-    
-    const btn = document.getElementById('btn-rec');
-    btn.disabled = true; btn.classList.add('loading'); btn.textContent = "CALCUL RAF20...";
-    
-    const num = document.getElementById('pt-num').value;
-    const code = document.getElementById('pt-code').value.toUpperCase() || "PT";
-    const hc = parseFloat(document.getElementById('pt-hc').value) || 2.0;
-    
-    const lon = lastPos.coords.longitude;
-    const lat = lastPos.coords.latitude;
-    const hEllip = lastPos.coords.altitude;
-
-    // Valeur de secours si pas de réseau
-    const ONDULATION_MOYENNE = 49.0;
-
-    try {
-      // Requête API IGN avec Timeout de 3 secondes
-      const url = `https://data.geopf.fr/altimetrie/1.0/calcul/altimetrique.json?lon=${lon}&lat=${lat}&resource=api-rest&indent=false`;
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-      const res = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      
-      if (!res.ok) throw new Error("Erreur Serveur IGN");
-      
-      const data = await res.json();
-      const zNGF = data.elevations[0].z; // Altitude du sol
-      
-      savePt(num, code, hc, lon, lat, zNGF - hc, "IGN69");
-
-    } catch (err) {
-      // Bascule automatique sans internet
-      console.warn("Réseau indisponible, bascule sur ondulation moyenne.");
-      const zApproche = hEllip - ONDULATION_MOYENNE - hc;
-      savePt(num, code, hc, lon, lat, zApproche, "APPROX (HORS-LIGNE)");
+  function recordPoint() {
+      if (!lastPos) return;
+      const num  = document.getElementById('pt-num').value;
+      const code = document.getElementById('pt-code').value.toUpperCase() || "PT";
+      const hc   = parseFloat(document.getElementById('pt-hc').value) || 0;
+      const lon  = lastPos.coords.longitude;
+      const lat  = lastPos.coords.latitude;
+      const zNGF = lastPos.coords.altitude !== null ? lastPos.coords.altitude - hc : null;
+      savePt(num, code, hc, lon, lat, zNGF, "TMM-NGF");
     }
-  }
 
   // 5. Sauvegarde et Interface
   function savePt(n, c, hc, lon, lat, z, note) {
@@ -284,7 +254,7 @@
       code: c, 
       x: l93[0].toFixed(3), 
       y: l93[1].toFixed(3), 
-      z: z.toFixed(3), 
+      z: z !== null ? z.toFixed(3) : '',
       hc: hc.toFixed(3), 
       note: note 
     };
