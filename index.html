@@ -292,6 +292,7 @@
     curProj.points.push(pt);
     db.transaction("projects","readwrite").objectStore("projects").put(curProj).onsuccess = () => {
       // Incrémentation auto
+      beep();
       document.getElementById('pt-num').value = parseInt(n) + 1;
       
       // Restauration du bouton
